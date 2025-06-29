@@ -201,6 +201,8 @@ impl NeoTheme {
     }
 
     pub fn to_legacy_theme(&self) -> crate::ui::Theme {
+        use ratatui::style::Style;
+        
         crate::ui::Theme {
             background: self.colors.background.to_ratatui_color(),
             foreground: self.colors.foreground.to_ratatui_color(),
@@ -212,6 +214,14 @@ impl NeoTheme {
             status_fg: self.colors.status_fg.to_ratatui_color(),
             command_bg: self.colors.command_bg.to_ratatui_color(),
             command_fg: self.colors.command_fg.to_ratatui_color(),
+            terminal_border: Style::default().fg(self.colors.status_bg.to_ratatui_color()),
+            terminal_title: Style::default().fg(self.colors.status_fg.to_ratatui_color()),
+            terminal_background: Style::default().bg(self.colors.background.to_ratatui_color()).fg(self.colors.foreground.to_ratatui_color()),
+            terminal_command: Style::default().fg(self.colors.syntax_keyword.to_ratatui_color()),
+            terminal_output: Style::default().fg(self.colors.foreground.to_ratatui_color()),
+            terminal_error: Style::default().fg(ratatui::style::Color::Rgb(255, 85, 85)),
+            terminal_running: Style::default().fg(ratatui::style::Color::Rgb(255, 165, 0)),
+            scrollbar: Style::default().fg(self.colors.line_number.to_ratatui_color()),
         }
     }
 }

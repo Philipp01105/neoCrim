@@ -1,6 +1,6 @@
 use ratatui::style::{Color, Style as RatatuiStyle};
 use std::path::Path;
-use syntect::highlighting::{Style, ThemeSet};
+use syntect::highlighting::{ThemeSet};
 use syntect::parsing::{SyntaxReference, SyntaxSet};
 
 pub struct SyntaxHighlighter {

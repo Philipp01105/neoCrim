@@ -51,7 +51,7 @@ impl App {
         
         Ok(Self {
             should_quit: false,
-            buffers: vec![Buffer::empty()],
+            buffers: vec![Buffer::terminal()],
             current_buffer: 0,
             cursor: Cursor::new(),
             mode: Mode::Normal,
@@ -71,6 +71,30 @@ impl App {
         self.buffers.push(buffer);
         self.current_buffer = self.buffers.len() - 1;
         Ok(())
+    }
+
+    pub fn open_terminal(&mut self) {
+        for (i, buffer) in self.buffers.iter().enumerate() {
+            if buffer.is_terminal() {
+                self.current_buffer = i;
+                return;
+            }
+        }
+        
+        let terminal_buffer = Buffer::terminal();
+        self.buffers.push(terminal_buffer);
+        self.current_buffer = self.buffers.len() - 1;
+    }
+
+    pub fn switch_to_previous_buffer(&mut self) {
+        if self.buffers.len() > 1 {
+            for (i, buffer) in self.buffers.iter().enumerate() {
+                if i != self.current_buffer && !buffer.is_terminal() {
+                    self.current_buffer = i;
+                    return;
+                }
+            }
+        }
     }
 
     pub fn current_buffer(&self) -> &Buffer {

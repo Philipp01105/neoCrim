@@ -1,7 +1,14 @@
 use ropey::Rope;
 use std::path::{Path, PathBuf};
 use crate::Result;
+use crate::ui::components::terminal::TerminalOutput;
 use anyhow::Context;
+
+#[derive(Debug, Clone)]
+pub enum BufferType {
+    File,
+    Terminal,
+}
 
 #[derive(Debug, Clone)]
 pub struct Buffer {
@@ -9,6 +16,8 @@ pub struct Buffer {
     pub file_path: Option<PathBuf>,
     pub is_modified: bool,
     pub is_readonly: bool,
+    pub buffer_type: BufferType,
+    pub terminal_output: Option<TerminalOutput>,
 }
 
 impl Buffer {
@@ -18,6 +27,19 @@ impl Buffer {
             file_path: None,
             is_modified: false,
             is_readonly: false,
+            buffer_type: BufferType::File,
+            terminal_output: None,
+        }
+    }
+
+    pub fn terminal() -> Self {
+        Self {
+            content: Rope::new(),
+            file_path: None,
+            is_modified: false,
+            is_readonly: true,
+            buffer_type: BufferType::Terminal,
+            terminal_output: Some(TerminalOutput::new()),
         }
     }
 
@@ -31,6 +53,8 @@ impl Buffer {
             file_path: Some(path.to_path_buf()),
             is_modified: false,
             is_readonly: false,
+            buffer_type: BufferType::File,
+            terminal_output: None,
         })
     }
 
@@ -118,11 +142,60 @@ impl Buffer {
     }
 
     pub fn file_name(&self) -> Option<String> {
-        self.file_path
-            .as_ref()
-            .and_then(|path| path.file_name())
-            .and_then(|name| name.to_str())
-            .map(|s| s.to_string())
+        match self.buffer_type {
+            BufferType::Terminal => Some("[Terminal]".to_string()),
+            BufferType::File => self.file_path
+                .as_ref()
+                .and_then(|path| path.file_name())
+                .and_then(|name| name.to_str())
+                .map(|s| s.to_string()),
+        }
+    }
+
+    pub fn is_terminal(&self) -> bool {
+        matches!(self.buffer_type, BufferType::Terminal)
+    }
+
+    pub fn execute_terminal_command(&mut self, command: &str) -> Result<()> {
+        if let Some(ref mut terminal_output) = self.terminal_output {
+            if let Err(e) = terminal_output.execute_command(command) {
+                return Err(anyhow::anyhow!("Terminal command failed: {}", e));
+            }
+        }
+        Ok(())
+    }
+
+    pub fn handle_terminal_input_char(&mut self, ch: char) {
+        if let Some(ref mut terminal_output) = self.terminal_output {
+            terminal_output.handle_input_char(ch);
+        }
+    }
+
+    pub fn handle_terminal_backspace(&mut self) {
+        if let Some(ref mut terminal_output) = self.terminal_output {
+            terminal_output.handle_backspace();
+        }
+    }
+
+    pub fn handle_terminal_enter(&mut self) -> Result<()> {
+        if let Some(ref mut terminal_output) = self.terminal_output {
+            if let Err(e) = terminal_output.handle_enter() {
+                return Err(anyhow::anyhow!("Terminal command failed: {}", e));
+            }
+        }
+        Ok(())
+    }
+
+    pub fn handle_terminal_history_up(&mut self) {
+        if let Some(ref mut terminal_output) = self.terminal_output {
+            terminal_output.history_up();
+        }
+    }
+
+    pub fn handle_terminal_history_down(&mut self) {
+        if let Some(ref mut terminal_output) = self.terminal_output {
+            terminal_output.history_down();
+        }
     }
 
     fn line_col_to_char_idx(&self, line: usize, col: usize) -> Option<usize> {

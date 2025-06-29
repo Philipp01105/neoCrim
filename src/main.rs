@@ -1,7 +1,7 @@
 use clap::{Arg, Command};
 use neocrim::{App, Result};
 use neocrim::input::EventHandler;
-use neocrim::ui::{setup_terminal, restore_terminal, Renderer, Theme};
+use neocrim::ui::{setup_terminal, restore_terminal, Renderer};
 use std::path::PathBuf;
 
 fn main() -> Result<()> {

@@ -82,6 +82,39 @@ impl EventHandler {
             return self.handle_file_explorer_mode(app, key_event);
         }
 
+        // Handle terminal buffer input
+        if app.current_buffer().is_terminal() {
+            match key_event.code {
+                KeyCode::Esc => {
+                    app.switch_to_previous_buffer();
+                    return Ok(());
+                }
+                KeyCode::Char(ch) => {
+                    app.current_buffer_mut().handle_terminal_input_char(ch);
+                    return Ok(());
+                }
+                KeyCode::Backspace => {
+                    app.current_buffer_mut().handle_terminal_backspace();
+                    return Ok(());
+                }
+                KeyCode::Enter => {
+                    if let Err(e) = app.current_buffer_mut().handle_terminal_enter() {
+                        app.set_error_message(format!("Terminal error: {}", e));
+                    }
+                    return Ok(());
+                }
+                KeyCode::Up => {
+                    app.current_buffer_mut().handle_terminal_history_up();
+                    return Ok(());
+                }
+                KeyCode::Down => {
+                    app.current_buffer_mut().handle_terminal_history_down();
+                    return Ok(());
+                }
+                _ => {}
+            }
+        }
+
         let viewport_width = self.get_viewport_width(app)?;
 
         match key_event.code {
@@ -522,6 +555,17 @@ impl EventHandler {
             "clear" => {
                 app.search_state.clear();
                 app.set_status_message("Search cleared".to_string());
+            }
+            "cmd" => {
+                app.open_terminal();
+                if parts.len() > 1 {
+                    let command = parts[1..].join(" ");
+                    if let Err(e) = app.current_buffer_mut().execute_terminal_command(&command) {
+                        app.set_error_message(format!("Command error: {}", e));
+                    }
+                } else {
+                    app.set_status_message("Terminal opened".to_string());
+                }
             }
             _ => {
                 app.set_error_message(format!("Unknown command: {}. Type :help for available commands", parts[0]));

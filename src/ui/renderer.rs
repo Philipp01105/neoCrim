@@ -55,6 +55,7 @@ impl Renderer {
                 .split(main_chunks[1]);
 
             self.render_editor(frame, app, editor_chunks[0]);
+            
             self.render_status_line(frame, app, editor_chunks[1]);
             self.render_command_line(frame, app, editor_chunks[2]);
         } else {
@@ -69,6 +70,7 @@ impl Renderer {
                 .split(main_chunks[0]);
 
             self.render_editor(frame, app, chunks[0]);
+            
             self.render_status_line(frame, app, chunks[1]);
             self.render_command_line(frame, app, chunks[2]);
         }
@@ -81,6 +83,11 @@ impl Renderer {
     fn render_editor(&self, frame: &mut Frame, app: &App, area: Rect) {
         let buffer = app.current_buffer();
         let cursor = &app.cursor;
+
+        if buffer.is_terminal() {
+            self.render_terminal(frame, app, area);
+            return;
+        }
 
         let line_number_width = if app.config.editor.line_numbers { 5 } else { 0 };
         let content_width = area.width as usize - line_number_width;
@@ -217,37 +224,7 @@ impl Renderer {
         }
     }
 
-    fn render_cursor(&self, frame: &mut Frame, app: &App, area: Rect, start_line: usize) {
-        let cursor = &app.cursor;
-        let buffer = app.current_buffer();
-
-        if cursor.line >= start_line && cursor.line < start_line + area.height as usize {
-            let line_number_width = if app.config.editor.line_numbers { 5 } else { 0 };
-            let content_width = area.width as usize - line_number_width;
-            
-           let (visual_line_offset, _) = cursor.calculate_visual_lines(&buffer, content_width);
-            let visual_col = cursor.col % content_width;
-            
-            let cursor_y = area.y + (cursor.line - start_line) as u16 + visual_line_offset as u16;
-            let cursor_x = area.x + line_number_width as u16 + visual_col as u16;
-
-            if cursor_x < area.x + area.width && cursor_y < area.y + area.height {
-                let cursor_area = Rect {
-                    x: cursor_x,
-                    y: cursor_y,
-                    width: 1,
-                    height: 1,
-                };
-
-                let cursor_char = if app.mode.is_insert() { "|" } else { "█" };
-                let cursor_widget = Paragraph::new(cursor_char)
-                    .style(Style::default().fg(self.theme.cursor).add_modifier(Modifier::BOLD));
-
-                frame.render_widget(Clear, cursor_area);
-                frame.render_widget(cursor_widget, cursor_area);
-            }
-        }
-    }
+    
 
     fn render_status_line(&self, frame: &mut Frame, app: &App, area: Rect) {
         let buffer = app.current_buffer();
@@ -381,48 +358,6 @@ impl Renderer {
         spans
     }
 
-    fn apply_search_highlighting_to_span<'a>(&self, text: &'a str, _line_idx: usize, app: &App, base_style: Style) -> Vec<Span<'a>> {
-        if !app.search_state.is_active || app.search_state.query.is_empty() {
-            return vec![Span::styled(text, base_style)];
-        }
-
-        let mut spans = Vec::new();
-        let mut last_end = 0;
-        let query = &app.search_state.query;
-        
-        let mut matches = Vec::new();
-        let mut start = 0;
-        while let Some(pos) = text[start..].find(query) {
-            let actual_pos = start + pos;
-            matches.push((actual_pos, actual_pos + query.len()));
-            start = actual_pos + 1;
-        }
-
-        for (start, end) in matches {
-            if start > last_end {
-                let segment = &text[last_end..start];
-                spans.push(Span::styled(segment, base_style));
-            }
-            
-            let match_text = &text[start..end];
-            let highlight_style = base_style.bg(Color::Yellow).fg(Color::Black);
-            spans.push(Span::styled(match_text, highlight_style));
-            
-            last_end = end;
-        }
-
-        if last_end < text.len() {
-            let segment = &text[last_end..];
-            spans.push(Span::styled(segment, base_style));
-        }
-
-        if spans.is_empty() {
-            spans.push(Span::styled(text, base_style));
-        }
-
-        spans
-    }
-
     fn render_help_window(&self, frame: &mut Frame, app: &App, area: Rect) {
         let window_width = (area.width * 4 / 5).max(60).min(80);
         let window_height = (area.height * 4 / 5).max(20);
@@ -495,6 +430,94 @@ impl Renderer {
                 .style(Style::default().fg(Color::Yellow).bg(self.theme.background));
             
             frame.render_widget(info_paragraph, info_area);
+        }
+    }
+
+    fn render_terminal(&self, frame: &mut Frame, app: &App, area: Rect) {
+        let buffer = app.current_buffer();
+        
+        if let Some(ref terminal_output) = buffer.terminal_output {
+            let block = ratatui::widgets::Block::default()
+                .title("[Terminal]")
+                .borders(ratatui::widgets::Borders::ALL)
+                .border_style(self.theme.terminal_border)
+                .title_style(self.theme.terminal_title);
+
+            let inner_area = block.inner(area);
+            frame.render_widget(block, area);
+
+            let viewport_height = inner_area.height as usize;
+            let total_lines = terminal_output.lines.len();
+            let _start_line = if total_lines <= viewport_height {
+                0
+            } else {
+                total_lines - viewport_height
+            };
+
+            // Reserve space for the input prompt at the bottom
+            let content_height = viewport_height.saturating_sub(1);
+            let display_lines = if terminal_output.lines.len() > content_height {
+                terminal_output.lines.len() - content_height
+            } else {
+                0
+            };
+
+            let mut visible_lines: Vec<Line> = terminal_output.lines
+                .iter()
+                .skip(display_lines)
+                .take(content_height)
+                .map(|line| {
+                    let style = if line.starts_with("$ ") {
+                        self.theme.terminal_command
+                    } else if line.starts_with("ERROR:") {
+                        self.theme.terminal_error
+                    } else {
+                        self.theme.terminal_output
+                    };
+                    Line::from(Span::styled(line.clone(), style))
+                })
+                .collect();
+
+            // Add the current input prompt line
+            let prompt_line = terminal_output.get_prompt_line();
+            visible_lines.push(Line::from(Span::styled(prompt_line, self.theme.terminal_command)));
+
+            let paragraph = Paragraph::new(visible_lines)
+                .style(self.theme.terminal_background);
+
+            frame.render_widget(paragraph, inner_area);
+
+            // Render cursor at the end of the input line
+            let prompt_line = terminal_output.get_prompt_line();
+            let cursor_x = inner_area.x + prompt_line.len() as u16;
+            let cursor_y = inner_area.y + inner_area.height - 1;
+            
+            if cursor_x < inner_area.x + inner_area.width && cursor_y < inner_area.y + inner_area.height {
+                let cursor_area = Rect {
+                    x: cursor_x,
+                    y: cursor_y,
+                    width: 1,
+                    height: 1,
+                };
+
+                let cursor_widget = Paragraph::new("█")
+                    .style(Style::default().fg(self.theme.cursor).add_modifier(ratatui::style::Modifier::BOLD));
+
+                frame.render_widget(ratatui::widgets::Clear, cursor_area);
+                frame.render_widget(cursor_widget, cursor_area);
+            }
+
+            if terminal_output.is_running {
+                let status_area = Rect {
+                    x: area.x + 2,
+                    y: area.y,
+                    width: 12,
+                    height: 1,
+                };
+                let status = Paragraph::new("[Running...]")
+                    .style(self.theme.terminal_running);
+                frame.render_widget(status, status_area);
+            }
         }
     }
 

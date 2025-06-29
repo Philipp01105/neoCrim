@@ -46,6 +46,11 @@ pub enum Command {
     Undo,
     Redo,
 
+    // Terminal
+    OpenTerminal,
+    ExecuteTerminalCommand(String),
+    ToggleTerminal,
+
     // No operation
     Noop,
 }
