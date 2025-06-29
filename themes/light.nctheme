@@ -1,0 +1,33 @@
+name = "Light Theme"
+author = "NeoCrim Team"
+description = "Clean light theme for bright environments"
+
+[colors]
+background = { r = 255, g = 255, b = 255 }
+foreground = { r = 51, g = 51, b = 51 }
+cursor = { r = 0, g = 0, b = 255 }
+selection = { r = 173, g = 214, b = 255 }
+line_number = { r = 133, g = 133, b = 133 }
+current_line = { r = 245, g = 245, b = 245 }
+
+status_bg = { r = 0, g = 120, b = 215 }
+status_fg = { r = 255, g = 255, b = 255 }
+command_bg = { r = 255, g = 255, b = 255 }
+command_fg = { r = 51, g = 51, b = 51 }
+
+explorer_bg = { r = 246, g = 246, b = 246 }
+explorer_fg = { r = 51, g = 51, b = 51 }
+explorer_selected = { r = 0, g = 120, b = 215 }
+explorer_directory = { r = 0, g = 120, b = 215 }
+explorer_file = { r = 51, g = 51, b = 51 }
+
+syntax_keyword = { r = 0, g = 0, b = 255 }
+syntax_string = { r = 163, g = 21, b = 21 }
+syntax_comment = { r = 0, g = 128, b = 0 }
+syntax_function = { r = 121, g = 94, b = 38 }
+syntax_type = { r = 43, g = 145, b = 175 }
+syntax_constant = { r = 111, g = 66, b = 193 }
+syntax_variable = { r = 0, g = 112, b = 193 }
+syntax_number = { r = 9, g = 134, b = 88 }
+syntax_operator = { r = 51, g = 51, b = 51 }
+syntax_punctuation = { r = 51, g = 51, b = 51 }
