@@ -308,7 +308,6 @@ impl Buffer {
     }
 
     pub fn save_state(&mut self, cursor: &Cursor) {
-        // Only save state for file buffers, not terminals
         if matches!(self.buffer_type, BufferType::Terminal) {
             return;
         }
@@ -318,14 +317,12 @@ impl Buffer {
             cursor: cursor.clone(),
         };
         
-        // Limit undo stack size to prevent memory issues
         const MAX_UNDO_STEPS: usize = 100;
         if self.undo_stack.len() >= MAX_UNDO_STEPS {
             self.undo_stack.pop_front();
         }
         
         self.undo_stack.push_back(state);
-        // Clear redo stack when new action is performed
         self.redo_stack.clear();
     }
 
@@ -335,14 +332,12 @@ impl Buffer {
         }
 
         if let Some(state) = self.undo_stack.pop_back() {
-            // Save current state to redo stack
             let current_state = UndoState {
                 content: self.content.clone(),
-                cursor: Cursor::new(), // Will be updated by caller
+                cursor: Cursor::new(), 
             };
             self.redo_stack.push_back(current_state);
             
-            // Restore previous state
             self.content = state.content;
             self.is_modified = true;
             Some(state.cursor)
@@ -357,14 +352,12 @@ impl Buffer {
         }
 
         if let Some(state) = self.redo_stack.pop_back() {
-            // Save current state to undo stack
             let current_state = UndoState {
                 content: self.content.clone(),
-                cursor: Cursor::new(), // Will be updated by caller
+                cursor: Cursor::new(),
             };
             self.undo_stack.push_back(current_state);
             
-            // Restore redo state
             self.content = state.content;
             self.is_modified = true;
             Some(state.cursor)

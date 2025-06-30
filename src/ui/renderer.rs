@@ -150,14 +150,12 @@ impl Renderer {
             let line_len = line_content.len();
             
             if !app.config.editor.wrap_lines || line_len <= content_width {
-                // No wrapping or line fits within viewport
                 visual_lines.push((line_idx, 0, line_content.clone()));
                 if line_idx == cursor.line {
                     cursor_visual_line = current_visual_line;
                 }
                 current_visual_line += 1;
             } else {
-                // Wrapping enabled and line is too long
                 let wrapped_lines = (line_len + content_width - 1) / content_width;
                 for wrap_idx in 0..wrapped_lines {
                     let start = wrap_idx * content_width;

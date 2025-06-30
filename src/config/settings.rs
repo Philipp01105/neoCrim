@@ -159,7 +159,6 @@ impl Config {
         Ok(())
     }
 
-    // Set methods for editor configuration
     pub fn set_line_numbers(&mut self, value: bool) -> Result<()> {
         self.editor.line_numbers = value;
         self.save()?;
@@ -234,7 +233,6 @@ impl Config {
         Ok(())
     }
 
-    // Get current setting values as formatted strings
     pub fn get_setting_display(&self, setting: &str) -> String {
         match setting.to_lowercase().as_str() {
             "linenumbers" | "line_numbers" | "nu" | "number" => {
