@@ -1,0 +1,60 @@
+name = "Dracula"
+author = "NeoCrim Team"
+description = "Dark theme inspired by the popular Dracula color scheme"
+
+[colors]
+background = { r = 40, g = 42, b = 54 }
+foreground = { r = 248, g = 248, b = 242 }
+cursor = { r = 248, g = 248, b = 242 }
+selection = { r = 68, g = 71, b = 90 }
+line_number = { r = 98, g = 114, b = 164 }
+current_line = { r = 68, g = 71, b = 90 }
+
+# Glass effect settings
+background_opacity = 0.95
+blur_radius = 6.0
+enable_glass = true
+
+# Status and command areas
+status_bg = { r = 139, g = 233, b = 253 }
+status_fg = { r = 40, g = 42, b = 54 }
+command_bg = { r = 40, g = 42, b = 54 }
+command_fg = { r = 248, g = 248, b = 242 }
+
+# File explorer
+explorer_bg = { r = 68, g = 71, b = 90 }
+explorer_fg = { r = 248, g = 248, b = 242 }
+explorer_selected = { r = 139, g = 233, b = 253, a = 0.3 }
+explorer_directory = { r = 139, g = 233, b = 253 }
+explorer_file = { r = 248, g = 248, b = 242 }
+
+# Enhanced colors
+accent_color = { r = 255, g = 121, b = 198 }
+border_color = { r = 98, g = 114, b = 164 }
+inactive_border = { r = 68, g = 71, b = 90 }
+highlight = { r = 255, g = 255, b = 255 }
+shadow = { r = 0, g = 0, b = 0, a = 0.7 }
+
+# Syntax highlighting
+syntax_keyword = { r = 255, g = 121, b = 198 }
+syntax_string = { r = 241, g = 250, b = 140 }
+syntax_comment = { r = 98, g = 114, b = 164 }
+syntax_function = { r = 80, g = 250, b = 123 }
+syntax_type = { r = 139, g = 233, b = 253 }
+syntax_constant = { r = 189, g = 147, b = 249 }
+syntax_variable = { r = 248, g = 248, b = 242 }
+syntax_number = { r = 189, g = 147, b = 249 }
+syntax_operator = { r = 255, g = 121, b = 198 }
+syntax_punctuation = { r = 248, g = 248, b = 242 }
+
+# Additional syntax colors
+syntax_attribute = { r = 80, g = 250, b = 123 }
+syntax_special = { r = 255, g = 184, b = 108 }
+syntax_tag = { r = 255, g = 121, b = 198 }
+syntax_link = { r = 139, g = 233, b = 253 }
+
+# Status colors
+error_color = { r = 255, g = 85, b = 85 }
+warning_color = { r = 255, g = 184, b = 108 }
+info_color = { r = 139, g = 233, b = 253 }
+success_color = { r = 80, g = 250, b = 123 }

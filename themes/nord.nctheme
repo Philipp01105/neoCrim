@@ -1,0 +1,60 @@
+name = "Nord"
+author = "NeoCrim Team"
+description = "Arctic-inspired color palette with glass effects"
+
+[colors]
+background = { r = 46, g = 52, b = 64, a = 0.9 }
+foreground = { r = 236, g = 239, b = 244 }
+cursor = { r = 136, g = 192, b = 208 }
+selection = { r = 76, g = 86, b = 106, a = 0.5 }
+line_number = { r = 76, g = 86, b = 106 }
+current_line = { r = 59, g = 66, b = 82, a = 0.7 }
+
+# Glass effect settings
+background_opacity = 0.9
+blur_radius = 10.0
+enable_glass = true
+
+# Status and command areas
+status_bg = { r = 136, g = 192, b = 208 }
+status_fg = { r = 46, g = 52, b = 64 }
+command_bg = { r = 59, g = 66, b = 82, a = 0.9 }
+command_fg = { r = 236, g = 239, b = 244 }
+
+# File explorer
+explorer_bg = { r = 59, g = 66, b = 82, a = 0.8 }
+explorer_fg = { r = 236, g = 239, b = 244 }
+explorer_selected = { r = 136, g = 192, b = 208, a = 0.4 }
+explorer_directory = { r = 136, g = 192, b = 208 }
+explorer_file = { r = 236, g = 239, b = 244 }
+
+# Enhanced colors
+accent_color = { r = 136, g = 192, b = 208 }
+border_color = { r = 76, g = 86, b = 106 }
+inactive_border = { r = 59, g = 66, b = 82 }
+highlight = { r = 236, g = 239, b = 244 }
+shadow = { r = 0, g = 0, b = 0, a = 0.4 }
+
+# Syntax highlighting
+syntax_keyword = { r = 129, g = 161, b = 193 }
+syntax_string = { r = 163, g = 190, b = 140 }
+syntax_comment = { r = 76, g = 86, b = 106 }
+syntax_function = { r = 136, g = 192, b = 208 }
+syntax_type = { r = 129, g = 161, b = 193 }
+syntax_constant = { r = 180, g = 142, b = 173 }
+syntax_variable = { r = 236, g = 239, b = 244 }
+syntax_number = { r = 180, g = 142, b = 173 }
+syntax_operator = { r = 129, g = 161, b = 193 }
+syntax_punctuation = { r = 236, g = 239, b = 244 }
+
+# Additional syntax colors
+syntax_attribute = { r = 143, g = 188, b = 187 }
+syntax_special = { r = 235, g = 203, b = 139 }
+syntax_tag = { r = 129, g = 161, b = 193 }
+syntax_link = { r = 136, g = 192, b = 208 }
+
+# Status colors
+error_color = { r = 191, g = 97, b = 106 }
+warning_color = { r = 235, g = 203, b = 139 }
+info_color = { r = 136, g = 192, b = 208 }
+success_color = { r = 163, g = 190, b = 140 }

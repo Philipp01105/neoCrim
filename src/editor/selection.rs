@@ -37,14 +37,17 @@ impl Selection {
             return None;
         }
 
-        let (start, end) = if self.start.line < self.end.line 
-            || (self.start.line == self.end.line && self.start.col <= self.end.col) {
-            (self.start, self.end)
+        let start = self.start;
+        let end = self.end;
+
+        let (ordered_start, ordered_end) = if start.line < end.line 
+            || (start.line == end.line && start.col <= end.col) {
+            (start, end)
         } else {
-            (self.end, self.start)
+            (end, start)
         };
 
-        Some((start, end))
+        Some((ordered_start, ordered_end))
     }
 
     pub fn contains_position(&self, line: usize, col: usize) -> bool {

@@ -38,10 +38,10 @@ fn main() -> Result<()> {
     }
 
     let mut terminal = setup_terminal()?;
-    let mut renderer = Renderer::new(app.config.theme.clone());
+    let mut renderer = Renderer::new_with_glass_effects(app.config.theme.clone(), &app.config.current_theme);
 
     loop {
-        renderer.update_theme(app.config.theme.clone());
+        renderer.update_theme_with_effects(app.config.theme.clone(), &app.config.current_theme);
         
         terminal.draw(|frame| {
             renderer.render(frame, &mut app);

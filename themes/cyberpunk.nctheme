@@ -1,0 +1,60 @@
+name = "Cyberpunk"
+author = "NeoCrim Team"
+description = "Neon-inspired cyberpunk theme with electric colors"
+
+[colors]
+background = { r = 10, g = 10, b = 20 }
+foreground = { r = 0, g = 255, b = 255 }
+cursor = { r = 255, g = 0, b = 255 }
+selection = { r = 255, g = 0, b = 255, a = 0.3 }
+line_number = { r = 128, g = 128, b = 255 }
+current_line = { r = 20, g = 20, b = 40 }
+
+# Glass effect settings
+background_opacity = 0.9
+blur_radius = 8.0
+enable_glass = true
+
+# Status and command areas
+status_bg = { r = 255, g = 0, b = 128 }
+status_fg = { r = 0, g = 0, b = 0 }
+command_bg = { r = 15, g = 15, b = 30 }
+command_fg = { r = 0, g = 255, b = 255 }
+
+# File explorer
+explorer_bg = { r = 15, g = 15, b = 30 }
+explorer_fg = { r = 0, g = 255, b = 255 }
+explorer_selected = { r = 255, g = 0, b = 255, a = 0.5 }
+explorer_directory = { r = 255, g = 255, b = 0 }
+explorer_file = { r = 0, g = 255, b = 255 }
+
+# Enhanced colors
+accent_color = { r = 255, g = 0, b = 255 }
+border_color = { r = 0, g = 255, b = 255 }
+inactive_border = { r = 64, g = 64, b = 128 }
+highlight = { r = 255, g = 255, b = 255 }
+shadow = { r = 255, g = 0, b = 255, a = 0.3 }
+
+# Syntax highlighting
+syntax_keyword = { r = 255, g = 0, b = 255 }
+syntax_string = { r = 0, g = 255, b = 128 }
+syntax_comment = { r = 128, g = 128, b = 128 }
+syntax_function = { r = 255, g = 255, b = 0 }
+syntax_type = { r = 0, g = 255, b = 255 }
+syntax_constant = { r = 255, g = 128, b = 0 }
+syntax_variable = { r = 255, g = 255, b = 255 }
+syntax_number = { r = 255, g = 128, b = 255 }
+syntax_operator = { r = 255, g = 0, b = 128 }
+syntax_punctuation = { r = 128, g = 255, b = 255 }
+
+# Additional syntax colors
+syntax_attribute = { r = 128, g = 255, b = 0 }
+syntax_special = { r = 255, g = 128, b = 0 }
+syntax_tag = { r = 255, g = 0, b = 255 }
+syntax_link = { r = 0, g = 128, b = 255 }
+
+# Status colors
+error_color = { r = 255, g = 0, b = 0 }
+warning_color = { r = 255, g = 255, b = 0 }
+info_color = { r = 0, g = 255, b = 255 }
+success_color = { r = 0, g = 255, b = 0 }

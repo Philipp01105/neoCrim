@@ -1,7 +1,7 @@
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use crossterm::terminal;
 use crate::app::App;
-use crate::editor::Mode;
+use crate::editor::{Cursor, Mode};
 use crate::Result;
 use std::time::Duration;
 
@@ -82,7 +82,6 @@ impl EventHandler {
             return self.handle_file_explorer_mode(app, key_event);
         }
 
-        // Handle terminal buffer input
         if app.current_buffer().is_terminal() {
             match key_event.code {
                 KeyCode::Esc => {
@@ -116,6 +115,146 @@ impl EventHandler {
         }
 
         let viewport_width = self.get_viewport_width(app)?;
+
+        if key_event.modifiers.contains(KeyModifiers::CONTROL) {
+            match key_event.code {
+                KeyCode::Char('c') => {
+                    app.copy_selection();
+                    if app.selection.active {
+                        app.set_status_message("Copied selection".to_string());
+                    }
+                    return Ok(());
+                }
+                KeyCode::Char('x') => {
+                    if app.selection.active {
+                        app.cut_selection();
+                        app.set_status_message("Cut selection".to_string());
+                    }
+                    return Ok(());
+                }
+                KeyCode::Char('v') => {
+                    app.paste();
+                    app.set_status_message("Pasted from clipboard".to_string());
+                    return Ok(());
+                }
+                KeyCode::Char('z') => {
+                    // TODO: Implement proper undo system
+                    app.set_status_message("Undo functionality coming soon".to_string());
+                    return Ok(());
+                }
+                KeyCode::Char('y') => {
+                    // TODO: Implement redo system  
+                    app.set_status_message("Redo functionality coming soon".to_string());
+                    return Ok(());
+                }
+                KeyCode::Char('a') => {
+                    let line_count = app.current_buffer().line_count();
+                    let last_line_text = if line_count > 0 {
+                        app.current_buffer().line(line_count.saturating_sub(1))
+                    } else {
+                        None
+                    };
+                    
+                    if line_count > 0 {
+                        app.selection.start_selection(Cursor::new());
+                        let mut end_cursor = Cursor::new();
+                        end_cursor.line = line_count.saturating_sub(1);
+                        if let Some(last_line) = last_line_text {
+                            end_cursor.col = last_line.len();
+                        }
+                        app.selection.update_selection(end_cursor);
+                        app.set_status_message("Selected all text".to_string());
+                    }
+                    return Ok(());
+                }
+                _ => {}
+            }
+        }
+
+        if key_event.modifiers.contains(KeyModifiers::SHIFT) {
+            match key_event.code {
+                KeyCode::Left => {
+                    if !app.selection.active {
+                        app.start_selection();
+                    }
+                    if app.cursor.col > 0 {
+                        app.cursor.col -= 1;
+                        app.cursor.desired_col = app.cursor.col;
+                    } else if app.cursor.line > 0 {
+                        app.cursor.line -= 1;
+                        let buffer = app.current_buffer();
+                        if let Some(line_content) = buffer.line(app.cursor.line) {
+                            app.cursor.col = line_content.len();
+                            app.cursor.desired_col = app.cursor.col;
+                        }
+                    }
+                    app.update_selection();
+                    return Ok(());
+                }
+                KeyCode::Right => {
+                    if !app.selection.active {
+                        app.start_selection();
+                    }
+                    let buffer = app.current_buffer();
+                    if let Some(line_content) = buffer.line(app.cursor.line) {
+                        if app.cursor.col < line_content.len() {
+                            app.cursor.col += 1;
+                        } else if app.cursor.line + 1 < buffer.line_count() {
+                            app.cursor.line += 1;
+                            app.cursor.col = 0;
+                        }
+                        app.cursor.desired_col = app.cursor.col;
+                    }
+                    app.update_selection();
+                    return Ok(());
+                }
+                KeyCode::Up => {
+                    if !app.selection.active {
+                        app.start_selection();
+                    }
+                    if app.cursor.line > 0 {
+                        app.cursor.line -= 1;
+                        let buffer = app.current_buffer();
+                        if let Some(line_content) = buffer.line(app.cursor.line) {
+                            app.cursor.col = app.cursor.desired_col.min(line_content.len());
+                        }
+                    }
+                    app.update_selection();
+                    return Ok(());
+                }
+                KeyCode::Down => {
+                    if !app.selection.active {
+                        app.start_selection();
+                    }
+                    let buffer = app.current_buffer();
+                    let current_line = app.cursor.line;
+                    let line_count = buffer.line_count();
+                    
+                    if current_line + 1 < line_count {
+                        let new_line = current_line + 1;
+                        let line_content = buffer.line(new_line);
+                        
+                        app.cursor.line = new_line;
+                        if let Some(content) = line_content {
+                            app.cursor.col = app.cursor.desired_col.min(content.len());
+                        }
+                    }
+                    app.update_selection();
+                    return Ok(());
+                }
+                _ => {}
+            }
+        } else {
+            if app.selection.active {
+                match key_event.code {
+                    KeyCode::Left | KeyCode::Right | KeyCode::Up | KeyCode::Down |
+                    KeyCode::Char('h') | KeyCode::Char('j') | KeyCode::Char('k') | KeyCode::Char('l') => {
+                        app.clear_selection();
+                    }
+                    _ => {}
+                }
+            }
+        }
 
         match key_event.code {
             KeyCode::Char('h') | KeyCode::Left => {
@@ -444,41 +583,135 @@ impl EventHandler {
             }
             "e" | "edit" => {
                 if parts.len() > 1 {
-                    let path = std::path::PathBuf::from(parts[1]);
-                    let path_display = path.display().to_string();
-                    if let Err(e) = app.open_file(path) {
-                        app.set_error_message(format!("Error opening file: {}", e));
-                    } else {
-                        app.set_status_message(format!("Opened: {}", path_display));
+                    let filename = parts[1];
+                    match app.open_or_create_file(filename) {
+                        Ok(()) => {
+                            let current_buffer = app.current_buffer();
+                            if current_buffer.is_modified {
+                                app.set_status_message(format!("Created new file: {}", filename));
+                            } else {
+                                app.set_status_message(format!("Opened: {}", filename));
+                            }
+                        }
+                        Err(e) => {
+                            app.set_error_message(format!("Error opening/creating file: {}", e));
+                        }
                     }
                 } else {
                     app.set_error_message("Usage: :e <filename>".to_string());
                 }
             }
-            "theme" => {
+            "pwd" => {
+                let current_dir = app.get_current_directory();
+                app.set_status_message(format!("Current directory: {}", current_dir.display()));
+            }
+            "cd" => {
                 if parts.len() > 1 {
-                    let theme_path = std::path::PathBuf::from(parts[1]);
-                    
-                    if let Some(extension) = theme_path.extension() {
-                        if extension != "nctheme" {
-                            app.set_error_message("Theme files must have .nctheme extension".to_string());
-                            return Ok(());
-                        }
-                    } else {
-                        app.set_error_message("Theme files must have .nctheme extension".to_string());
-                        return Ok(());
-                    }
-                    
-                    match app.config.set_theme(&theme_path) {
+                    let target_path = std::path::PathBuf::from(parts[1]);
+                    match app.file_explorer.navigate_to(&target_path) {
                         Ok(()) => {
-                            app.set_status_message(format!("Theme loaded: {}", app.config.current_theme.name));
+                            app.set_status_message(format!("Changed directory to: {}", target_path.display()));
                         }
                         Err(e) => {
-                            app.set_error_message(format!("Error loading theme: {}", e));
+                            app.set_error_message(format!("Error changing directory: {}", e));
                         }
                     }
                 } else {
-                    app.set_error_message("Usage: :theme <path-to-theme.nctheme>".to_string());
+                    app.set_error_message("Usage: :cd <directory>".to_string());
+                }
+            }
+            "explorer" => {
+                app.file_explorer.toggle_visibility();
+                let status = if app.file_explorer.visible { "shown" } else { "hidden" };
+                app.set_status_message(format!("File explorer {}", status));
+            }
+            "refresh" => {
+                match app.file_explorer.refresh() {
+                    Ok(()) => {
+                        app.set_status_message("File explorer refreshed".to_string());
+                    }
+                    Err(e) => {
+                        app.set_error_message(format!("Error refreshing explorer: {}", e));
+                    }
+                }
+            }
+            "theme" => {
+                if parts.len() > 1 {
+                    if let Ok(index) = parts[1].parse::<usize>() {
+                        match app.config.set_theme_by_index(index) {
+                            Ok(()) => {
+                                app.set_status_message(format!("Theme changed to: {}", app.config.current_theme.name));
+                            }
+                            Err(e) => {
+                                app.set_error_message(format!("Error setting theme: {}", e));
+                            }
+                        }
+                    } else if parts[1] == "list" {
+                        let themes = app.config.list_available_themes();
+                        let mut message = "Available themes:\n".to_string();
+                        for (index, name, author, description) in themes {
+                            message.push_str(&format!("  {}: {} by {} - {}\n", index, name, author, description));
+                        }
+                        app.set_status_message(message);
+                    } else if parts[1] == "default" {
+                        if parts.len() > 2 {
+                            if let Ok(index) = parts[2].parse::<usize>() {
+                                match app.config.set_default_theme_by_index(index) {
+                                    Ok(()) => {
+                                        app.set_status_message(format!("Default theme {} loaded: {}", index, app.config.current_theme.name));
+                                    }
+                                    Err(e) => {
+                                        app.set_error_message(format!("Error setting default theme: {}", e));
+                                    }
+                                }
+                            } else {
+                                app.set_error_message("Usage: :theme default <index>".to_string());
+                            }
+                        } else {
+                            let default_themes = app.config.get_default_themes();
+                            let mut message = "Default themes (from /themes directory):\n".to_string();
+                            for (index, theme_name) in default_themes.iter().enumerate() {
+                                message.push_str(&format!("  {}: {}\n", index, theme_name));
+                            }
+                            message.push_str("Usage: :theme default <index>");
+                            app.set_status_message(message);
+                        }
+                    } else {
+                        match app.config.set_theme_by_name(parts[1]) {
+                            Ok(()) => {
+                                app.set_status_message(format!("Theme changed to: {}", app.config.current_theme.name));
+                            }
+                            Err(_) => {
+                                let theme_path = std::path::PathBuf::from(parts[1]);
+                                
+                                if let Some(extension) = theme_path.extension() {
+                                    if extension != "nctheme" {
+                                        app.set_error_message("Theme files must have .nctheme extension".to_string());
+                                        return Ok(());
+                                    }
+                                } else {
+                                    app.set_error_message("Theme files must have .nctheme extension".to_string());
+                                    return Ok(());
+                                }
+                                
+                                match app.config.set_theme(&theme_path) {
+                                    Ok(()) => {
+                                        app.set_status_message(format!("Theme loaded: {}", app.config.current_theme.name));
+                                    }
+                                    Err(e) => {
+                                        app.set_error_message(format!("Error loading theme: {}", e));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    let current_theme = &app.config.current_theme.name;
+                    let themes_count = app.config.theme_manager.theme_count();
+                    app.set_status_message(format!(
+                        "Current theme: {}\nUsage: :theme <name|index|list> or :theme default [index] or :theme <path.nctheme>\nAvailable themes: {} (use ':theme list' to see all)", 
+                        current_theme, themes_count
+                    ));
                 }
             }
             "find" | "f" => {

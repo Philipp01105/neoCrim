@@ -2,6 +2,7 @@ use ropey::Rope;
 use std::path::{Path, PathBuf};
 use crate::Result;
 use crate::ui::components::terminal::TerminalOutput;
+use crate::editor::{Cursor, Selection};
 use anyhow::Context;
 
 #[derive(Debug, Clone)]
@@ -58,8 +59,26 @@ impl Buffer {
         })
     }
 
+    pub fn new_file<P: AsRef<Path>>(path: P) -> Self {
+        Self {
+            content: Rope::new(),
+            file_path: Some(path.as_ref().to_path_buf()),
+            is_modified: true, 
+            is_readonly: false,
+            buffer_type: BufferType::File,
+            terminal_output: None,
+        }
+    }
+
     pub fn save(&mut self) -> Result<()> {
         if let Some(path) = &self.file_path {
+            if let Some(parent) = path.parent() {
+                if !parent.exists() {
+                    std::fs::create_dir_all(parent)
+                        .with_context(|| format!("Failed to create directory: {}", parent.display()))?;
+                }
+            }
+            
             let content = self.content.to_string();
             std::fs::write(path, content)
                 .with_context(|| format!("Failed to save file: {}", path.display()))?;
@@ -115,6 +134,64 @@ impl Buffer {
 
     pub fn line_count(&self) -> usize {
         self.content.len_lines()
+    }
+
+    pub fn get_selected_text(&self, selection: &Selection) -> String {
+        if let Some((start, end)) = selection.get_range() {
+            let start_char = self.cursor_to_char_idx(&start);
+            let end_char = self.cursor_to_char_idx(&end);
+            
+            if start_char <= end_char && end_char <= self.content.len_chars() {
+                self.content.slice(start_char..end_char).to_string()
+            } else {
+                String::new()
+            }
+        } else {
+            String::new()
+        }
+    }
+
+    pub fn delete_selected_text(&mut self, selection: &Selection) -> String {
+        if let Some((start, end)) = selection.get_range() {
+            let start_char = self.cursor_to_char_idx(&start);
+            let end_char = self.cursor_to_char_idx(&end);
+            
+            if start_char <= end_char && end_char <= self.content.len_chars() {
+                let deleted_text = self.content.slice(start_char..end_char).to_string();
+                self.content.remove(start_char..end_char);
+                self.is_modified = true;
+                return deleted_text;
+            }
+        }
+        String::new()
+    }
+
+    pub fn insert_text_at_cursor(&mut self, cursor: &Cursor, text: &str) {
+        let char_idx = self.cursor_to_char_idx(cursor);
+        if char_idx <= self.content.len_chars() {
+            self.content.insert(char_idx, text);
+            self.is_modified = true;
+        }
+    }
+
+    fn cursor_to_char_idx(&self, cursor: &Cursor) -> usize {
+        if self.content.len_lines() == 0 {
+            return 0;
+        }
+        
+        if cursor.line >= self.line_count() {
+            return self.content.len_chars();
+        }
+        
+        let line_start = self.content.line_to_char(cursor.line);
+        let line_content = self.content.line(cursor.line);
+        let line_len = line_content.len_chars();
+        
+        if line_len == 0 {
+            line_start
+        } else {
+            line_start + cursor.col.min(line_len)
+        }
     }
 
     pub fn line(&self, line_idx: usize) -> Option<String> {

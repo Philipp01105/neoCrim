@@ -1,4 +1,4 @@
-use crate::editor::{Buffer, Cursor, Mode};
+use crate::editor::{Buffer, Clipboard, Cursor, Mode, Selection};
 use crate::config::Config;
 use crate::ui::components::FileExplorer;
 use crate::syntax::SyntaxHighlighter;
@@ -10,6 +10,7 @@ pub struct App {
     pub buffers: Vec<Buffer>,
     pub current_buffer: usize,
     pub cursor: Cursor,
+    pub selection: Selection,
     pub mode: Mode,
     pub config: Config,
     pub status_message: Option<String>,
@@ -54,6 +55,7 @@ impl App {
             buffers: vec![Buffer::terminal()],
             current_buffer: 0,
             cursor: Cursor::new(),
+            selection: Selection::new(),
             mode: Mode::Normal,
             config,
             status_message: None,
@@ -71,6 +73,97 @@ impl App {
         self.buffers.push(buffer);
         self.current_buffer = self.buffers.len() - 1;
         Ok(())
+    }
+
+    pub fn open_or_create_file(&mut self, filename: &str) -> Result<()> {
+        let path = if std::path::Path::new(filename).is_absolute() {
+            PathBuf::from(filename)
+        } else {
+            self.file_explorer.get_current_path().join(filename)
+        };
+
+        if path.exists() {
+            let buffer = Buffer::from_file(&path)?;
+            self.buffers.push(buffer);
+            self.current_buffer = self.buffers.len() - 1;
+            Ok(())
+        } else {
+            let buffer = Buffer::new_file(&path);
+            self.buffers.push(buffer);
+            self.current_buffer = self.buffers.len() - 1;
+            Ok(())
+        }
+    }
+
+    pub fn get_current_directory(&self) -> &std::path::Path {
+        self.file_explorer.get_current_path()
+    }
+
+    pub fn navigate_explorer_to_current_file(&mut self) -> Result<()> {
+        let file_path = self.current_buffer().file_path.clone();
+        if let Some(file_path) = file_path {
+            self.file_explorer.navigate_to(&file_path)?;
+        }
+        Ok(())
+    }
+
+    pub fn copy_selection(&self) {
+        if self.selection.active {
+            let buffer = self.current_buffer();
+            let selected_text = buffer.get_selected_text(&self.selection);
+            if !selected_text.is_empty() {
+                Clipboard::set_text(selected_text);
+            }
+        }
+    }
+
+    pub fn cut_selection(&mut self) {
+        if self.selection.active {
+            let selection_copy = self.selection.clone();
+            let buffer = self.current_buffer_mut();
+            let deleted_text = buffer.delete_selected_text(&selection_copy);
+            if !deleted_text.is_empty() {
+                Clipboard::set_text(deleted_text);
+                if let Some((start, _)) = selection_copy.get_range() {
+                    self.cursor = start;
+                }
+                self.selection.clear();
+            }
+        }
+    }
+
+    pub fn paste(&mut self) {
+        let text = Clipboard::get_text();
+        if !text.is_empty() {
+            if self.selection.active {
+                self.cut_selection();
+            }
+            
+            let cursor_copy = self.cursor;
+            let buffer = self.current_buffer_mut();
+            buffer.insert_text_at_cursor(&cursor_copy, &text);
+            
+            let lines: Vec<&str> = text.lines().collect();
+            if lines.len() == 1 {
+                self.cursor.col += text.len();
+            } else {
+                self.cursor.line += lines.len() - 1;
+                self.cursor.col = lines.last().map(|line| line.len()).unwrap_or(0);
+            }
+            self.cursor.desired_col = self.cursor.col;
+        }
+    }
+
+    pub fn start_selection(&mut self) {
+        self.selection.start_selection(self.cursor);
+    }
+
+    pub fn update_selection(&mut self) {
+        self.selection.update_selection(self.cursor);
+    }
+
+    pub fn clear_selection(&mut self) {
+        self.selection.clear();
     }
 
     pub fn open_terminal(&mut self) {
@@ -238,10 +331,14 @@ impl HelpWindow {
             "Available Commands:".to_string(),
             "".to_string(),
             "File Operations:".to_string(),
-            "  :e <file>          - Edit/open file".to_string(),
+            "  :e <file>          - Edit/open file (creates if not exists)".to_string(),
             "  :w                 - Save current file".to_string(),
             "  :wq                - Save and quit".to_string(),
             "  :q                 - Quit editor".to_string(),
+            "  :pwd               - Show current directory".to_string(),
+            "  :cd <dir>          - Change current directory".to_string(),
+            "  :explorer          - Toggle file explorer".to_string(),
+            "  :refresh           - Refresh file explorer".to_string(),
             "".to_string(),
             "Search & Navigation:".to_string(),
             "  :find <pattern>    - Search for pattern".to_string(),
@@ -265,6 +362,7 @@ impl HelpWindow {
             "Movement (Normal Mode):".to_string(),
             "  h, j, k, l         - Move cursor left, down, up, right".to_string(),
             "  Arrow keys         - Move cursor".to_string(),
+            "  Shift+Arrow keys   - Select text".to_string(),
             "  w                  - Jump to next word".to_string(),
             "  b                  - Jump to previous word".to_string(),
             "  g                  - Go to beginning of file".to_string(),
@@ -277,8 +375,12 @@ impl HelpWindow {
             "  a                  - Enter insert mode after cursor".to_string(),
             "  o                  - Insert new line below and enter insert mode".to_string(),
             "  x                  - Delete character under cursor".to_string(),
-            "  d                  - Delete line (with Shift)".to_string(),
-            "  v                  - Enter visual mode".to_string(),
+            "".to_string(),
+            "Clipboard Operations:".to_string(),
+            "  Ctrl+C             - Copy selection".to_string(),
+            "  Ctrl+X             - Cut selection".to_string(),
+            "  Ctrl+V             - Paste from clipboard".to_string(),
+            "  Ctrl+A             - Select all text".to_string(),
             "".to_string(),
             "Special Keys:".to_string(),
             "  Esc                - Return to normal mode / Close this help".to_string(),

@@ -7,18 +7,35 @@ use ratatui::{
 };
 use crate::app::App;
 use crate::ui::theme::Theme;
+use crate::ui::themes::NeoTheme;
 
 pub struct Renderer {
     theme: Theme,
+    glass_effects_enabled: bool,
 }
 
 impl Renderer {
     pub fn new(theme: Theme) -> Self {
-        Self { theme }
+        Self { 
+            theme,
+            glass_effects_enabled: false,
+        }
+    }
+
+    pub fn new_with_glass_effects(theme: Theme, neo_theme: &NeoTheme) -> Self {
+        Self {
+            theme,
+            glass_effects_enabled: neo_theme.colors.enable_glass,
+        }
     }
 
     pub fn update_theme(&mut self, theme: Theme) {
         self.theme = theme;
+    }
+
+    pub fn update_theme_with_effects(&mut self, theme: Theme, neo_theme: &NeoTheme) {
+        self.theme = theme;
+        self.glass_effects_enabled = neo_theme.colors.enable_glass;
     }
 
     pub fn render(&self, frame: &mut Frame, app: &mut App) {
@@ -151,7 +168,7 @@ impl Renderer {
                     Span::styled(line_number, Style::default().fg(self.theme.line_number)),
                 ];
 
-                let content_with_highlights = self.apply_search_highlighting(content, *line_idx, app);
+                let content_with_highlights = self.apply_highlighting(content, *line_idx, app);
                 
                 if app.config.editor.syntax_highlighting {
                     if let Some(syntax) = buffer.file_path()
@@ -176,8 +193,9 @@ impl Renderer {
             }
         }
 
+        let background_style = self.get_background_style(app);
         let paragraph = Paragraph::new(lines)
-            .style(Style::default().fg(self.theme.foreground).bg(self.theme.background))
+            .style(Style::default().fg(self.theme.foreground).bg(background_style))
             .block(Block::default().borders(Borders::NONE));
 
         frame.render_widget(paragraph, area);
@@ -244,8 +262,9 @@ impl Renderer {
             Span::styled(file_info, Style::default().fg(self.theme.foreground)),
         ];
 
+        let background_style = self.get_glass_style(app, self.theme.background);
         let status_paragraph = Paragraph::new(Line::from(spans))
-            .style(Style::default().bg(self.theme.background));
+            .style(Style::default().bg(background_style));
 
         frame.render_widget(status_paragraph, area);
 
@@ -257,7 +276,7 @@ impl Renderer {
         };
 
         let cursor_paragraph = Paragraph::new(cursor_info)
-            .style(Style::default().fg(self.theme.foreground).bg(self.theme.background));
+            .style(Style::default().fg(self.theme.foreground).bg(background_style));
 
         frame.render_widget(cursor_paragraph, cursor_area);
     }
@@ -288,75 +307,127 @@ impl Renderer {
             String::new()
         };
 
+        let background_style = self.get_glass_style(app, self.theme.background);
         let paragraph = Paragraph::new(content)
-            .style(Style::default().fg(self.theme.foreground).bg(self.theme.background));
+            .style(Style::default().fg(self.theme.foreground).bg(background_style));
 
         frame.render_widget(paragraph, chunks[0]);
 
         if let Some(ref error_msg) = app.error_message {
             if chunks.len() > 1 {
                 let error_paragraph = Paragraph::new(error_msg.clone())
-                    .style(Style::default().fg(Color::Red).bg(self.theme.background));
+                    .style(Style::default().fg(Color::Red).bg(background_style));
                 frame.render_widget(error_paragraph, chunks[1]);
             }
         }
     }
 
-    fn apply_search_highlighting<'a>(&self, content: &'a str, line_idx: usize, app: &App) -> Vec<Span<'a>> {
-        if !app.search_state.is_active || app.search_state.query.is_empty() {
-            let style = if line_idx == app.cursor.line {
-                Style::default().bg(self.theme.current_line)
-            } else {
-                Style::default()
-            };
-            return vec![Span::styled(content, style)];
-        }
-
-        let mut spans = Vec::new();
-        let mut last_end = 0;
-        let query = &app.search_state.query;
+    fn apply_highlighting<'a>(&self, content: &'a str, line_idx: usize, app: &App) -> Vec<Span<'a>> {
+        let mut segments = Vec::new();
         
-        let mut matches = Vec::new();
-        let mut start = 0;
-        while let Some(pos) = content[start..].find(query) {
-            let actual_pos = start + pos;
-            matches.push((actual_pos, actual_pos + query.len()));
-            start = actual_pos + 1;
-        }
-
-        for (start, end) in matches {
-           if start > last_end {
-                let text = &content[last_end..start];
-                let style = if line_idx == app.cursor.line {
-                    Style::default().bg(self.theme.current_line)
+        if app.selection.active {
+            if let Some((start, end)) = app.selection.get_range() {
+                if line_idx >= start.line && line_idx <= end.line {
+                    let (sel_start, sel_end) = if line_idx == start.line && line_idx == end.line {
+                        (start.col.min(content.len()), end.col.min(content.len()))
+                    } else if line_idx == start.line {
+                        (start.col.min(content.len()), content.len())
+                    } else if line_idx == end.line {
+                        (0, end.col.min(content.len()))
+                    } else {
+                        (0, content.len())
+                    };
+                    
+                    let sel_start = sel_start.min(content.len());
+                    let sel_end = sel_end.min(content.len()).max(sel_start);
+                    
+                    if sel_start > 0 {
+                        segments.push((0, sel_start, false, false));
+                    }
+                    if sel_end > sel_start {
+                        segments.push((sel_start, sel_end, true, false));
+                    }
+                    if sel_end < content.len() {
+                        segments.push((sel_end, content.len(), false, false));
+                    }
                 } else {
-                    Style::default()
-                };
+                    segments.push((0, content.len(), false, false));
+                }
+            } else {
+                segments.push((0, content.len(), false, false));
+            }
+        } else {
+            segments.push((0, content.len(), false, false));
+        }
+        
+        let mut spans = Vec::new();
+        let query = if app.search_state.is_active && !app.search_state.query.is_empty() {
+            Some(&app.search_state.query)
+        } else {
+            None
+        };
+        
+        for (start, end, is_selected, _) in segments {
+            let text = &content[start..end];
+            if text.is_empty() {
+                continue;
+            }
+            
+            if let Some(search_query) = query {
+                let mut last_pos = 0;
+                while let Some(match_pos) = text[last_pos..].find(search_query) {
+                    let actual_pos = last_pos + match_pos;
+                    
+                    if actual_pos > last_pos {
+                        let before_text = &text[last_pos..actual_pos];
+                        let style = self.get_text_style(line_idx, is_selected, false, app);
+                        spans.push(Span::styled(before_text, style));
+                    }
+                    
+                    let match_end = actual_pos + search_query.len();
+                    let match_text = &text[actual_pos..match_end];
+                    let style = self.get_text_style(line_idx, is_selected, true, app);
+                    spans.push(Span::styled(match_text, style));
+                    
+                    last_pos = match_end;
+                }
+                
+                if last_pos < text.len() {
+                    let remaining_text = &text[last_pos..];
+                    let style = self.get_text_style(line_idx, is_selected, false, app);
+                    spans.push(Span::styled(remaining_text, style));
+                }
+            } else {
+                let style = self.get_text_style(line_idx, is_selected, false, app);
                 spans.push(Span::styled(text, style));
             }
-            
-            let match_text = &content[start..end];
-            let mut style = Style::default().bg(Color::Yellow).fg(Color::Black);
-            if line_idx == app.cursor.line {
-                style = style.bg(Color::LightYellow);
-            }
-            spans.push(Span::styled(match_text, style));
-            
-            last_end = end;
         }
-
-        if last_end < content.len() {
-            let text = &content[last_end..];
-            let style = if line_idx == app.cursor.line {
-                Style::default().bg(self.theme.current_line)
-            } else {
-                Style::default()
-            };
-            spans.push(Span::styled(text, style));
-        }
-
+        
         spans
     }
+    
+    fn get_text_style(&self, line_idx: usize, is_selected: bool, is_search_match: bool, app: &App) -> Style {
+        let mut style = Style::default();
+        
+        if line_idx == app.cursor.line {
+            style = style.bg(self.theme.current_line);
+        }
+        
+        if is_selected {
+            style = style.bg(self.theme.selection).fg(Color::White);
+        }
+        
+        if is_search_match {
+            if is_selected {
+                style = style.bg(Color::LightYellow).fg(Color::Black);
+            } else {
+                style = style.bg(Color::Yellow).fg(Color::Black);
+            }
+        }
+        
+        style
+    }
+
 
     fn render_help_window(&self, frame: &mut Frame, app: &App, area: Rect) {
         let window_width = (area.width * 4 / 5).max(60).min(80);
@@ -375,7 +446,7 @@ impl Renderer {
         let clear_widget = ratatui::widgets::Clear;
         frame.render_widget(clear_widget, help_area);
 
-        let visible_height = help_area.height.saturating_sub(2) as usize; // Account for borders
+        let visible_height = help_area.height.saturating_sub(2) as usize;
         let start_line = app.help_window.scroll_offset;
         let end_line = (start_line + visible_height).min(app.help_window.content.len());
         
@@ -384,18 +455,15 @@ impl Renderer {
             .map(|line| Line::from(line.as_str()))
             .collect();
 
-        // Determine if scrolling is needed
         let can_scroll_up = app.help_window.scroll_offset > 0;
         let can_scroll_down = end_line < app.help_window.content.len();
         
-        // Create title with scroll indicators
         let title = if can_scroll_up || can_scroll_down {
             format!(" Help ({}/{}) ", start_line + 1, app.help_window.content.len())
         } else {
             " Help ".to_string()
         };
 
-        // Create the help window
         let help_paragraph = Paragraph::new(visible_content)
             .style(Style::default().fg(self.theme.foreground).bg(self.theme.background))
             .block(
@@ -409,7 +477,6 @@ impl Renderer {
 
         frame.render_widget(help_paragraph, help_area);
 
-        // Add scroll instructions at the bottom
         if can_scroll_up || can_scroll_down {
             let scroll_info = if can_scroll_up && can_scroll_down {
                 " ↑↓ to scroll, ESC to close "
@@ -433,6 +500,41 @@ impl Renderer {
         }
     }
 
+    fn get_background_style(&self, app: &App) -> Color {
+        if self.glass_effects_enabled {
+            let neo_theme = &app.config.current_theme;
+            if neo_theme.colors.enable_glass && neo_theme.colors.background_opacity < 1.0 {
+                return neo_theme.colors.background.to_transparent_color();
+            }
+        }
+        self.theme.background
+    }
+
+    fn get_glass_style(&self, app: &App, base_color: Color) -> Color {
+        if self.glass_effects_enabled {
+            let neo_theme = &app.config.current_theme;
+            if neo_theme.colors.enable_glass && neo_theme.colors.background_opacity < 1.0 {
+                let status_bg_alpha = neo_theme.colors.status_bg.get_alpha();
+                if status_bg_alpha < 1.0 {
+                    return neo_theme.colors.status_bg.to_transparent_color();
+                }
+                
+                if let Color::Rgb(r, g, b) = base_color {
+                    let alpha = neo_theme.colors.background_opacity;
+                    if alpha < 0.5 {
+                        return Color::Reset; 
+                    } else {
+                        let blended_r = ((r as f32 * alpha) + (30.0 * (1.0 - alpha))) as u8;
+                        let blended_g = ((g as f32 * alpha) + (30.0 * (1.0 - alpha))) as u8;
+                        let blended_b = ((b as f32 * alpha) + (30.0 * (1.0 - alpha))) as u8;
+                        return Color::Rgb(blended_r, blended_g, blended_b);
+                    }
+                }
+            }
+        }
+        base_color
+    }
+
     fn render_terminal(&self, frame: &mut Frame, app: &App, area: Rect) {
         let buffer = app.current_buffer();
         
@@ -454,7 +556,6 @@ impl Renderer {
                 total_lines - viewport_height
             };
 
-            // Reserve space for the input prompt at the bottom
             let content_height = viewport_height.saturating_sub(1);
             let display_lines = if terminal_output.lines.len() > content_height {
                 terminal_output.lines.len() - content_height
@@ -478,7 +579,6 @@ impl Renderer {
                 })
                 .collect();
 
-            // Add the current input prompt line
             let prompt_line = terminal_output.get_prompt_line();
             visible_lines.push(Line::from(Span::styled(prompt_line, self.theme.terminal_command)));
 
@@ -487,7 +587,6 @@ impl Renderer {
 
             frame.render_widget(paragraph, inner_area);
 
-            // Render cursor at the end of the input line
             let prompt_line = terminal_output.get_prompt_line();
             let cursor_x = inner_area.x + prompt_line.len() as u16;
             let cursor_y = inner_area.y + inner_area.height - 1;

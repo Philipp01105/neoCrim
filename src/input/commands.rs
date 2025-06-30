@@ -51,6 +51,11 @@ pub enum Command {
     ExecuteTerminalCommand(String),
     ToggleTerminal,
 
+    // Theme commands
+    SetTheme(String),
+    SetThemeByIndex(usize),
+    ListThemes,
+
     // No operation
     Noop,
 }

@@ -1,0 +1,60 @@
+name = "Solarized Dark"
+author = "NeoCrim Team"
+description = "Precision colors for machines and people with glass effects"
+
+[colors]
+background = { r = 0, g = 43, b = 54, a = 0.92 }
+foreground = { r = 131, g = 148, b = 150 }
+cursor = { r = 203, g = 75, b = 22 }
+selection = { r = 7, g = 54, b = 66, a = 0.6 }
+line_number = { r = 88, g = 110, b = 117 }
+current_line = { r = 7, g = 54, b = 66, a = 0.5 }
+
+# Glass effect settings
+background_opacity = 0.92
+blur_radius = 8.0
+enable_glass = true
+
+# Status and command areas
+status_bg = { r = 38, g = 139, b = 210 }
+status_fg = { r = 253, g = 246, b = 227 }
+command_bg = { r = 7, g = 54, b = 66, a = 0.9 }
+command_fg = { r = 131, g = 148, b = 150 }
+
+# File explorer
+explorer_bg = { r = 7, g = 54, b = 66, a = 0.8 }
+explorer_fg = { r = 131, g = 148, b = 150 }
+explorer_selected = { r = 38, g = 139, b = 210, a = 0.4 }
+explorer_directory = { r = 38, g = 139, b = 210 }
+explorer_file = { r = 131, g = 148, b = 150 }
+
+# Enhanced colors
+accent_color = { r = 38, g = 139, b = 210 }
+border_color = { r = 88, g = 110, b = 117 }
+inactive_border = { r = 7, g = 54, b = 66 }
+highlight = { r = 253, g = 246, b = 227 }
+shadow = { r = 0, g = 0, b = 0, a = 0.6 }
+
+# Syntax highlighting
+syntax_keyword = { r = 181, g = 137, b = 0 }
+syntax_string = { r = 42, g = 161, b = 152 }
+syntax_comment = { r = 88, g = 110, b = 117 }
+syntax_function = { r = 38, g = 139, b = 210 }
+syntax_type = { r = 203, g = 75, b = 22 }
+syntax_constant = { r = 108, g = 113, b = 196 }
+syntax_variable = { r = 131, g = 148, b = 150 }
+syntax_number = { r = 211, g = 1, b = 2 }
+syntax_operator = { r = 220, g = 50, b = 47 }
+syntax_punctuation = { r = 131, g = 148, b = 150 }
+
+# Additional syntax colors
+syntax_attribute = { r = 42, g = 161, b = 152 }
+syntax_special = { r = 181, g = 137, b = 0 }
+syntax_tag = { r = 38, g = 139, b = 210 }
+syntax_link = { r = 42, g = 161, b = 152 }
+
+# Status colors
+error_color = { r = 220, g = 50, b = 47 }
+warning_color = { r = 181, g = 137, b = 0 }
+info_color = { r = 38, g = 139, b = 210 }
+success_color = { r = 133, g = 153, b = 0 }

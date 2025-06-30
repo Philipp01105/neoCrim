@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::path::{PathBuf};
-use crate::ui::{Theme, NeoTheme};
+use crate::ui::{Theme, NeoTheme, ThemeManager};
 use crate::Result;
 use anyhow::Context;
 
@@ -13,6 +13,8 @@ pub struct Config {
     pub theme: Theme,
     #[serde(skip)]
     pub current_theme: NeoTheme,
+    #[serde(skip)]
+    pub theme_manager: ThemeManager,
     pub theme_path: Option<PathBuf>,
 }
 
@@ -51,10 +53,12 @@ impl Config {
                 let mut config: Config = toml::from_str(&content)
                     .with_context(|| "Failed to parse config file")?;
                
+                config.theme_manager = ThemeManager::new();
+                
                 config.current_theme = if let Some(ref theme_path) = config.theme_path {
                     NeoTheme::load_from_file(theme_path).unwrap_or_else(|_| NeoTheme::default())
                 } else {
-                    NeoTheme::default()
+                    config.theme_manager.get_theme_by_name(&config.ui.theme).unwrap_or_else(|_| NeoTheme::default())
                 };
                 
                 config.theme = config.current_theme.to_legacy_theme();
@@ -75,11 +79,59 @@ impl Config {
         self.current_theme = new_theme;
         self.theme = self.current_theme.to_legacy_theme();
         self.theme_path = Some(theme_path.to_path_buf());
+        self.ui.theme = "custom".to_string();
         
         self.save()
             .with_context(|| "Failed to save config after setting theme")?;
         
         Ok(())
+    }
+
+    pub fn set_theme_by_name(&mut self, theme_name: &str) -> Result<()> {
+        let new_theme = self.theme_manager.get_theme_by_name(theme_name)
+            .with_context(|| format!("Failed to load theme: {}", theme_name))?;
+        
+        self.current_theme = new_theme;
+        self.theme = self.current_theme.to_legacy_theme();
+        self.ui.theme = theme_name.to_string();
+        self.theme_path = None; 
+        
+        self.save()
+            .with_context(|| "Failed to save config after setting theme")?;
+        
+        Ok(())
+    }
+
+    pub fn set_theme_by_index(&mut self, index: usize) -> Result<()> {
+        let theme_names = self.theme_manager.list_themes().clone();
+        if index >= theme_names.len() {
+            return Err(anyhow::anyhow!("Theme index {} out of range (0-{})", index, theme_names.len() - 1));
+        }
+        
+        let theme_name = theme_names[index].clone();
+        self.set_theme_by_name(&theme_name)
+    }
+
+    pub fn set_theme_to_default(&mut self) -> Result<()> {
+        self.set_theme_by_name("dark")
+    }
+
+    pub fn get_default_themes(&self) -> Vec<String> {
+        self.theme_manager.list_themes().clone()
+    }
+
+    pub fn set_default_theme_by_index(&mut self, index: usize) -> Result<()> {
+        self.set_theme_by_index(index)
+    }
+
+    pub fn list_available_themes(&self) -> Vec<(usize, String, String, String)> {
+        let mut themes = Vec::new();
+        for (index, theme_name) in self.theme_manager.list_themes().iter().enumerate() {
+            if let Ok((name, author, description)) = self.theme_manager.get_theme_info(theme_name) {
+                themes.push((index, name, author, description));
+            }
+        }
+        themes
     }
 
     pub fn save(&self) -> Result<()> {
@@ -110,7 +162,8 @@ impl Config {
 
 impl Default for Config {
     fn default() -> Self {
-        let current_theme = NeoTheme::default();
+        let theme_manager = ThemeManager::new();
+        let current_theme = theme_manager.get_theme_by_name("dark").unwrap_or_else(|_| NeoTheme::default());
         let legacy_theme = current_theme.to_legacy_theme();
         
         Self {
@@ -125,7 +178,7 @@ impl Default for Config {
                 syntax_highlighting: true,
             },
             ui: UiConfig {
-                theme: "default".to_string(),
+                theme: "dark".to_string(),
                 show_status_line: true,
                 show_command_line: true,
                 cursor_blink: true,
@@ -135,6 +188,7 @@ impl Default for Config {
             },
             theme: legacy_theme,
             current_theme,
+            theme_manager,
             theme_path: None,
         }
     }
