@@ -23,7 +23,17 @@ impl EditorView {
 
         let viewport_height = area.height as usize;
         let viewport_width = area.width as usize;
-        let line_number_width = if app.config.editor.line_numbers { 5 } else { 0 };
+
+        let line_number_width = if app.config.editor.line_numbers || app.config.editor.relative_line_numbers {
+            if app.config.editor.relative_line_numbers {
+                5
+            } else {
+                4
+            }
+        } else {
+            0
+        };
+
         let _content_width = viewport_width.saturating_sub(line_number_width);
 
         let scroll_offset = app.config.editor.scroll_offset;
@@ -40,7 +50,23 @@ impl EditorView {
 
         for line_idx in start_line..end_line {
             let line_content = buffer.line(line_idx).unwrap_or_default();
-            let line_number = if app.config.editor.line_numbers {
+
+            let line_number = if app.config.editor.relative_line_numbers {
+                if line_idx == cursor.line {
+                    if app.config.editor.line_numbers {
+                        format!("{:4} ", line_idx + 1)
+                    } else {
+                        format!("{:4} ", 0)
+                    }
+                } else {
+                    let relative_distance = if line_idx > cursor.line {
+                        line_idx - cursor.line
+                    } else {
+                        cursor.line - line_idx
+                    };
+                    format!("{:4} ", relative_distance)
+                }
+            } else if app.config.editor.line_numbers {
                 format!("{:4} ", line_idx + 1)
             } else {
                 String::new()
@@ -52,10 +78,14 @@ impl EditorView {
                 Style::default()
             };
 
-            let spans = vec![
-                Span::styled(line_number, Style::default().fg(self.theme.line_number)),
-                Span::styled(line_content, style),
-            ];
+            let spans = if line_number.is_empty() {
+                vec![Span::styled(line_content, style)]
+            } else {
+                vec![
+                    Span::styled(line_number, Style::default().fg(self.theme.line_number)),
+                    Span::styled(line_content, style),
+                ]
+            };
 
             lines.push(Line::from(spans));
         }

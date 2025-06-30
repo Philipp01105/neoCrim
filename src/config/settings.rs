@@ -158,6 +158,144 @@ impl Config {
         *self = Self::load()?;
         Ok(())
     }
+
+    // Set methods for editor configuration
+    pub fn set_line_numbers(&mut self, value: bool) -> Result<()> {
+        self.editor.line_numbers = value;
+        self.save()?;
+        Ok(())
+    }
+
+    pub fn set_relative_line_numbers(&mut self, value: bool) -> Result<()> {
+        self.editor.relative_line_numbers = value;
+        self.save()?;
+        Ok(())
+    }
+
+    pub fn set_tab_size(&mut self, value: usize) -> Result<()> {
+        if value > 0 && value <= 16 {
+            self.editor.tab_size = value;
+            self.save()?;
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!("Tab size must be between 1 and 16"))
+        }
+    }
+
+    pub fn set_insert_tabs(&mut self, value: bool) -> Result<()> {
+        self.editor.insert_tabs = value;
+        self.save()?;
+        Ok(())
+    }
+
+    pub fn set_auto_save(&mut self, value: bool) -> Result<()> {
+        self.editor.auto_save = value;
+        self.save()?;
+        Ok(())
+    }
+
+    pub fn set_wrap_lines(&mut self, value: bool) -> Result<()> {
+        self.editor.wrap_lines = value;
+        self.save()?;
+        Ok(())
+    }
+
+    pub fn set_scroll_offset(&mut self, value: usize) -> Result<()> {
+        if value <= 20 {
+            self.editor.scroll_offset = value;
+            self.save()?;
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!("Scroll offset must be 20 or less"))
+        }
+    }
+
+    pub fn set_syntax_highlighting(&mut self, value: bool) -> Result<()> {
+        self.editor.syntax_highlighting = value;
+        self.save()?;
+        Ok(())
+    }
+
+    pub fn set_cursor_blink(&mut self, value: bool) -> Result<()> {
+        self.ui.cursor_blink = value;
+        self.save()?;
+        Ok(())
+    }
+
+    pub fn set_show_status_line(&mut self, value: bool) -> Result<()> {
+        self.ui.show_status_line = value;
+        self.save()?;
+        Ok(())
+    }
+
+    pub fn set_show_command_line(&mut self, value: bool) -> Result<()> {
+        self.ui.show_command_line = value;
+        self.save()?;
+        Ok(())
+    }
+
+    // Get current setting values as formatted strings
+    pub fn get_setting_display(&self, setting: &str) -> String {
+        match setting.to_lowercase().as_str() {
+            "linenumbers" | "line_numbers" | "nu" | "number" => {
+                format!("line_numbers = {}", self.editor.line_numbers)
+            }
+            "relativelinenumbers" | "relative_line_numbers" | "rnu" | "relativenumber" => {
+                format!("relative_line_numbers = {}", self.editor.relative_line_numbers)
+            }
+            "tabsize" | "tab_size" | "ts" => {
+                format!("tab_size = {}", self.editor.tab_size)
+            }
+            "inserttabs" | "insert_tabs" | "et" | "expandtab" => {
+                format!("insert_tabs = {}", self.editor.insert_tabs)
+            }
+            "autosave" | "auto_save" => {
+                format!("auto_save = {}", self.editor.auto_save)
+            }
+            "wraplines" | "wrap_lines" | "wrap" => {
+                format!("wrap_lines = {}", self.editor.wrap_lines)
+            }
+            "scrolloffset" | "scroll_offset" | "so" => {
+                format!("scroll_offset = {}", self.editor.scroll_offset)
+            }
+            "syntaxhighlighting" | "syntax_highlighting" | "syntax" => {
+                format!("syntax_highlighting = {}", self.editor.syntax_highlighting)
+            }
+            "cursorblink" | "cursor_blink" => {
+                format!("cursor_blink = {}", self.ui.cursor_blink)
+            }
+            "showstatusline" | "show_status_line" | "statusline" => {
+                format!("show_status_line = {}", self.ui.show_status_line)
+            }
+            "showcommandline" | "show_command_line" | "commandline" => {
+                format!("show_command_line = {}", self.ui.show_command_line)
+            }
+            "theme" => {
+                format!("theme = {}", self.ui.theme)
+            }
+            _ => format!("Unknown setting: {}", setting)
+        }
+    }
+
+    pub fn get_all_settings_display(&self) -> Vec<String> {
+        vec![
+            format!("Editor Settings:"),
+            format!("  line_numbers = {}", self.editor.line_numbers),
+            format!("  relative_line_numbers = {}", self.editor.relative_line_numbers),
+            format!("  tab_size = {}", self.editor.tab_size),
+            format!("  insert_tabs = {}", self.editor.insert_tabs),
+            format!("  auto_save = {}", self.editor.auto_save),
+            format!("  wrap_lines = {}", self.editor.wrap_lines),
+            format!("  scroll_offset = {}", self.editor.scroll_offset),
+            format!("  syntax_highlighting = {}", self.editor.syntax_highlighting),
+            format!(""),
+            format!("UI Settings:"),
+            format!("  cursor_blink = {}", self.ui.cursor_blink),
+            format!("  show_status_line = {}", self.ui.show_status_line),
+            format!("  show_command_line = {}", self.ui.show_command_line),
+            format!("  theme = {}", self.ui.theme),
+        ]
+    }
 }
 
 impl Default for Config {

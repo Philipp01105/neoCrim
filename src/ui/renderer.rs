@@ -61,35 +61,65 @@ impl Renderer {
         if app.file_explorer.visible {
             app.file_explorer.render(frame, main_chunks[0], &self.theme);
 
-            let command_line_height = if app.error_message.is_some() { 2 } else { 1 };
+            let command_line_height = if app.config.ui.show_command_line {
+                if app.error_message.is_some() { 2 } else { 1 }
+            } else { 0 };
+            
+            let status_line_height = if app.config.ui.show_status_line { 1 } else { 0 };
+            
+            let mut constraints = vec![Constraint::Min(3)];
+            if app.config.ui.show_status_line {
+                constraints.push(Constraint::Length(status_line_height));
+            }
+            if app.config.ui.show_command_line {
+                constraints.push(Constraint::Length(command_line_height));
+            }
+            
             let editor_chunks = Layout::default()
                 .direction(Direction::Vertical)
-                .constraints([
-                    Constraint::Min(3),
-                    Constraint::Length(1),
-                    Constraint::Length(command_line_height),
-                ].as_ref())
+                .constraints(constraints)
                 .split(main_chunks[1]);
 
             self.render_editor(frame, app, editor_chunks[0]);
             
-            self.render_status_line(frame, app, editor_chunks[1]);
-            self.render_command_line(frame, app, editor_chunks[2]);
+            let mut chunk_idx = 1;
+            if app.config.ui.show_status_line {
+                self.render_status_line(frame, app, editor_chunks[chunk_idx]);
+                chunk_idx += 1;
+            }
+            if app.config.ui.show_command_line {
+                self.render_command_line(frame, app, editor_chunks[chunk_idx]);
+            }
         } else {
-            let command_line_height = if app.error_message.is_some() { 2 } else { 1 };
+            let command_line_height = if app.config.ui.show_command_line {
+                if app.error_message.is_some() { 2 } else { 1 }
+            } else { 0 };
+            
+            let status_line_height = if app.config.ui.show_status_line { 1 } else { 0 };
+            
+            let mut constraints = vec![Constraint::Min(3)];
+            if app.config.ui.show_status_line {
+                constraints.push(Constraint::Length(status_line_height));
+            }
+            if app.config.ui.show_command_line {
+                constraints.push(Constraint::Length(command_line_height));
+            }
+            
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
-                .constraints([
-                    Constraint::Min(3),
-                    Constraint::Length(1),
-                    Constraint::Length(command_line_height),
-                ].as_ref())
+                .constraints(constraints)
                 .split(main_chunks[0]);
 
             self.render_editor(frame, app, chunks[0]);
             
-            self.render_status_line(frame, app, chunks[1]);
-            self.render_command_line(frame, app, chunks[2]);
+            let mut chunk_idx = 1;
+            if app.config.ui.show_status_line {
+                self.render_status_line(frame, app, chunks[chunk_idx]);
+                chunk_idx += 1;
+            }
+            if app.config.ui.show_command_line {
+                self.render_command_line(frame, app, chunks[chunk_idx]);
+            }
         }
 
         if app.help_window.visible {
@@ -106,7 +136,7 @@ impl Renderer {
             return;
         }
 
-        let line_number_width = if app.config.editor.line_numbers { 5 } else { 0 };
+        let line_number_width = if app.config.editor.line_numbers || app.config.editor.relative_line_numbers { 5 } else { 0 };
         let content_width = area.width as usize - line_number_width;
         let viewport_height = area.height as usize;
         let scroll_offset = app.config.editor.scroll_offset;
@@ -119,13 +149,15 @@ impl Renderer {
             let line_content = buffer.line(line_idx).unwrap_or_default();
             let line_len = line_content.len();
             
-            if line_len <= content_width {
+            if !app.config.editor.wrap_lines || line_len <= content_width {
+                // No wrapping or line fits within viewport
                 visual_lines.push((line_idx, 0, line_content.clone()));
                 if line_idx == cursor.line {
                     cursor_visual_line = current_visual_line;
                 }
                 current_visual_line += 1;
             } else {
+                // Wrapping enabled and line is too long
                 let wrapped_lines = (line_len + content_width - 1) / content_width;
                 for wrap_idx in 0..wrapped_lines {
                     let start = wrap_idx * content_width;
@@ -153,7 +185,26 @@ impl Renderer {
         let mut lines = Vec::new();
         for visual_idx in start_visual_line..end_visual_line {
             if let Some((line_idx, wrap_idx, content)) = visual_lines.get(visual_idx) {
-                let line_number = if app.config.editor.line_numbers {
+                let line_number = if app.config.editor.relative_line_numbers {
+                    if *wrap_idx == 0 {
+                        if *line_idx == cursor.line {
+                            if app.config.editor.line_numbers {
+                                format!("{:4} ", line_idx + 1)
+                            } else {
+                                format!("{:4} ", 0)
+                            }
+                        } else {
+                            let relative_distance = if *line_idx > cursor.line {
+                                *line_idx - cursor.line
+                            } else {
+                                cursor.line - *line_idx
+                            };
+                            format!("{:4} ", relative_distance)
+                        }
+                    } else {
+                        "     ".to_string()
+                    }
+                } else if app.config.editor.line_numbers {
                     if *wrap_idx == 0 {
                         format!("{:4} ", line_idx + 1)
                     } else {
@@ -205,7 +256,7 @@ impl Renderer {
 
     fn render_cursor_visual(&self, frame: &mut Frame, app: &App, area: Rect, start_visual_line: usize, visual_lines: &[(usize, usize, String)]) {
         let cursor = &app.cursor;
-        let line_number_width = if app.config.editor.line_numbers { 5 } else { 0 };
+        let line_number_width = if app.config.editor.line_numbers || app.config.editor.relative_line_numbers { 5 } else { 0 };
         let content_width = area.width as usize - line_number_width;
 
         for (visual_idx, (line_idx, wrap_idx, _content)) in visual_lines.iter().enumerate() {
@@ -220,7 +271,7 @@ impl Renderer {
                         let cursor_y = area.y + (visual_line_idx - start_visual_line) as u16;
                         let cursor_x = area.x + line_number_width as u16 + (cursor.col - start_col) as u16;
 
-                        if cursor_x < area.x + area.width && cursor_y < area.y + area.height {
+                        if cursor_x < area.x + area.width && cursor_y < area.y + area.height && app.should_show_cursor() {
                             let cursor_area = Rect {
                                 x: cursor_x,
                                 y: cursor_y,
@@ -591,7 +642,7 @@ impl Renderer {
             let cursor_x = inner_area.x + prompt_line.len() as u16;
             let cursor_y = inner_area.y + inner_area.height - 1;
             
-            if cursor_x < inner_area.x + inner_area.width && cursor_y < inner_area.y + inner_area.height {
+            if cursor_x < inner_area.x + inner_area.width && cursor_y < inner_area.y + inner_area.height && app.should_show_cursor() {
                 let cursor_area = Rect {
                     x: cursor_x,
                     y: cursor_y,

@@ -41,6 +41,7 @@ fn main() -> Result<()> {
     let mut renderer = Renderer::new_with_glass_effects(app.config.theme.clone(), &app.config.current_theme);
 
     loop {
+        app.update_cursor_blink();
         renderer.update_theme_with_effects(app.config.theme.clone(), &app.config.current_theme);
         
         terminal.draw(|frame| {

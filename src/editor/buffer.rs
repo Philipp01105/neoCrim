@@ -4,11 +4,18 @@ use crate::Result;
 use crate::ui::components::terminal::TerminalOutput;
 use crate::editor::{Cursor, Selection};
 use anyhow::Context;
+use std::collections::VecDeque;
 
 #[derive(Debug, Clone)]
 pub enum BufferType {
     File,
     Terminal,
+}
+
+#[derive(Debug, Clone)]
+pub struct UndoState {
+    pub content: Rope,
+    pub cursor: Cursor,
 }
 
 #[derive(Debug, Clone)]
@@ -19,6 +26,8 @@ pub struct Buffer {
     pub is_readonly: bool,
     pub buffer_type: BufferType,
     pub terminal_output: Option<TerminalOutput>,
+    pub undo_stack: VecDeque<UndoState>,
+    pub redo_stack: VecDeque<UndoState>,
 }
 
 impl Buffer {
@@ -30,6 +39,8 @@ impl Buffer {
             is_readonly: false,
             buffer_type: BufferType::File,
             terminal_output: None,
+            undo_stack: VecDeque::new(),
+            redo_stack: VecDeque::new(),
         }
     }
 
@@ -41,6 +52,8 @@ impl Buffer {
             is_readonly: true,
             buffer_type: BufferType::Terminal,
             terminal_output: Some(TerminalOutput::new()),
+            undo_stack: VecDeque::new(),
+            redo_stack: VecDeque::new(),
         }
     }
 
@@ -56,6 +69,8 @@ impl Buffer {
             is_readonly: false,
             buffer_type: BufferType::File,
             terminal_output: None,
+            undo_stack: VecDeque::new(),
+            redo_stack: VecDeque::new(),
         })
     }
 
@@ -67,6 +82,8 @@ impl Buffer {
             is_readonly: false,
             buffer_type: BufferType::File,
             terminal_output: None,
+            undo_stack: VecDeque::new(),
+            redo_stack: VecDeque::new(),
         }
     }
 
@@ -288,5 +305,79 @@ impl Buffer {
         } else {
             Some(line_start + col)
         }
+    }
+
+    pub fn save_state(&mut self, cursor: &Cursor) {
+        // Only save state for file buffers, not terminals
+        if matches!(self.buffer_type, BufferType::Terminal) {
+            return;
+        }
+
+        let state = UndoState {
+            content: self.content.clone(),
+            cursor: cursor.clone(),
+        };
+        
+        // Limit undo stack size to prevent memory issues
+        const MAX_UNDO_STEPS: usize = 100;
+        if self.undo_stack.len() >= MAX_UNDO_STEPS {
+            self.undo_stack.pop_front();
+        }
+        
+        self.undo_stack.push_back(state);
+        // Clear redo stack when new action is performed
+        self.redo_stack.clear();
+    }
+
+    pub fn undo(&mut self) -> Option<Cursor> {
+        if matches!(self.buffer_type, BufferType::Terminal) {
+            return None;
+        }
+
+        if let Some(state) = self.undo_stack.pop_back() {
+            // Save current state to redo stack
+            let current_state = UndoState {
+                content: self.content.clone(),
+                cursor: Cursor::new(), // Will be updated by caller
+            };
+            self.redo_stack.push_back(current_state);
+            
+            // Restore previous state
+            self.content = state.content;
+            self.is_modified = true;
+            Some(state.cursor)
+        } else {
+            None
+        }
+    }
+
+    pub fn redo(&mut self) -> Option<Cursor> {
+        if matches!(self.buffer_type, BufferType::Terminal) {
+            return None;
+        }
+
+        if let Some(state) = self.redo_stack.pop_back() {
+            // Save current state to undo stack
+            let current_state = UndoState {
+                content: self.content.clone(),
+                cursor: Cursor::new(), // Will be updated by caller
+            };
+            self.undo_stack.push_back(current_state);
+            
+            // Restore redo state
+            self.content = state.content;
+            self.is_modified = true;
+            Some(state.cursor)
+        } else {
+            None
+        }
+    }
+
+    pub fn can_undo(&self) -> bool {
+        !self.undo_stack.is_empty() && !matches!(self.buffer_type, BufferType::Terminal)
+    }
+
+    pub fn can_redo(&self) -> bool {
+        !self.redo_stack.is_empty() && !matches!(self.buffer_type, BufferType::Terminal)
     }
 }

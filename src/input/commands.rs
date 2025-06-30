@@ -56,6 +56,23 @@ pub enum Command {
     SetThemeByIndex(usize),
     ListThemes,
 
+    // Set commands for editor configuration
+    SetLineNumbers(bool),
+    SetRelativeLineNumbers(bool),
+    SetTabSize(usize),
+    SetInsertTabs(bool),
+    SetAutoSave(bool),
+    SetWrapLines(bool),
+    SetScrollOffset(usize),
+    SetSyntaxHighlighting(bool),
+    SetCursorBlink(bool),
+    SetShowStatusLine(bool),
+    SetShowCommandLine(bool),
+    
+    // Get commands to show current settings
+    ShowSettings,
+    ShowSetting(String),
+
     // No operation
     Noop,
 }

@@ -4,6 +4,7 @@ use crate::ui::components::FileExplorer;
 use crate::syntax::SyntaxHighlighter;
 use crate::Result;
 use std::path::PathBuf;
+use std::time::Instant;
 
 pub struct App {
     pub should_quit: bool,
@@ -20,6 +21,8 @@ pub struct App {
     pub search_state: SearchState,
     pub error_message: Option<String>,
     pub help_window: HelpWindow,
+    pub cursor_blink_state: bool,
+    pub last_cursor_blink: Instant,
 }
 
 #[derive(Debug, Clone)]
@@ -65,6 +68,8 @@ impl App {
             search_state: SearchState::new(),
             error_message: None,
             help_window: HelpWindow::new(),
+            cursor_blink_state: true,
+            last_cursor_blink: Instant::now(),
         })
     }
 
@@ -166,6 +171,22 @@ impl App {
         self.selection.clear();
     }
 
+    pub fn delete_selection(&mut self) -> bool {
+        if !self.selection.active {
+            return false;
+        }
+
+        if let Some((start, end)) = self.selection.get_range() {
+            self.save_undo_state();
+            self.current_buffer_mut().delete_range(start.line, start.col, end.line, end.col);
+            self.cursor = start;
+            self.clear_selection();
+            true
+        } else {
+            false
+        }
+    }
+
     pub fn open_terminal(&mut self) {
         for (i, buffer) in self.buffers.iter().enumerate() {
             if buffer.is_terminal() {
@@ -202,6 +223,26 @@ impl App {
         self.should_quit = true;
     }
 
+    pub fn update_cursor_blink(&mut self) {
+        if self.config.ui.cursor_blink {
+            let now = Instant::now();
+            if now.duration_since(self.last_cursor_blink).as_millis() > 500 {
+                self.cursor_blink_state = !self.cursor_blink_state;
+                self.last_cursor_blink = now;
+            }
+        } else {
+            self.cursor_blink_state = true;
+        }
+    }
+
+    pub fn should_show_cursor(&self) -> bool {
+        if self.config.ui.cursor_blink {
+            self.cursor_blink_state
+        } else {
+            true
+        }
+    }
+
     pub fn set_status_message(&mut self, message: String) {
         self.status_message = Some(message);
     }
@@ -212,6 +253,33 @@ impl App {
 
     pub fn clear_error_message(&mut self) {
         self.error_message = None;
+    }
+
+    pub fn save_undo_state(&mut self) {
+        let cursor = self.cursor.clone();
+        self.current_buffer_mut().save_state(&cursor);
+    }
+
+    pub fn undo(&mut self) {
+        if let Some(cursor) = self.current_buffer_mut().undo() {
+            self.cursor = cursor;
+            let buffer = self.current_buffer().clone();
+            self.cursor.clamp_to_buffer(&buffer);
+            self.set_status_message("Undo".to_string());
+        } else {
+            self.set_status_message("Nothing to undo".to_string());
+        }
+    }
+
+    pub fn redo(&mut self) {
+        if let Some(cursor) = self.current_buffer_mut().redo() {
+            self.cursor = cursor;
+            let buffer = self.current_buffer().clone();
+            self.cursor.clamp_to_buffer(&buffer);
+            self.set_status_message("Redo".to_string());
+        } else {
+            self.set_status_message("Nothing to redo".to_string());
+        }
     }
 
     pub fn search(&mut self, query: &str) {
@@ -347,14 +415,48 @@ impl HelpWindow {
             "  :goto <line>       - Jump to line number".to_string(),
             "  :clear             - Clear search results".to_string(),
             "".to_string(),
-            "Settings:".to_string(),
-            "  :set numbers       - Show line numbers".to_string(),
-            "  :set nonumbers     - Hide line numbers".to_string(),
+            "Configuration & Settings:".to_string(),
+            "  :set               - Show all current settings".to_string(),
+            "  :set all           - Show all settings with descriptions".to_string(),
+            "  :set <option>?     - Show value of specific setting".to_string(),
+            "".to_string(),
+            "Line Numbers:".to_string(),
+            "  :set nu            - Enable line numbers".to_string(),
+            "  :set nonu          - Disable line numbers".to_string(),
+            "  :set rnu           - Enable relative line numbers".to_string(),
+            "  :set nornu         - Disable relative line numbers".to_string(),
+            "  :set nu=true/false - Set line numbers directly".to_string(),
+            "".to_string(),
+            "Editor Options:".to_string(),
+            "  :set ts=4          - Set tab size (1-16)".to_string(),
+            "  :set et            - Use spaces instead of tabs".to_string(),
+            "  :set noet          - Use tabs instead of spaces".to_string(),
             "  :set syntax        - Enable syntax highlighting".to_string(),
             "  :set nosyntax      - Disable syntax highlighting".to_string(),
+            "  :set autosave      - Enable auto-save".to_string(),
+            "  :set noautosave    - Disable auto-save".to_string(),
+            "  :set wrap          - Enable line wrapping".to_string(),
+            "  :set nowrap        - Disable line wrapping".to_string(),
+            "  :set so=5          - Set scroll offset (0-20)".to_string(),
+            "".to_string(),
+            "UI Options:".to_string(),
+            "  :set cursorblink=true/false    - Enable/disable cursor blinking".to_string(),
+            "  :set statusline=true/false     - Show/hide status line".to_string(),
+            "  :set commandline=true/false    - Show/hide command line".to_string(),
+            "".to_string(),
+            "Setting Shortcuts (Vim-style):".to_string(),
+            "  nu/number          - Line numbers".to_string(),
+            "  rnu/relativenumber - Relative line numbers".to_string(),
+            "  ts/tabsize         - Tab size".to_string(),
+            "  et/expandtab       - Insert tabs as spaces".to_string(),
+            "  so/scrolloffset    - Scroll offset".to_string(),
             "".to_string(),
             "Themes:".to_string(),
-            "  :theme <file.nctheme> - Load theme file".to_string(),
+            "  :theme list        - List all available themes".to_string(),
+            "  :theme <name>      - Switch to built-in theme".to_string(),
+            "  :theme <index>     - Switch to theme by index".to_string(),
+            "  :theme <file.nctheme> - Load custom theme file".to_string(),
+            "  :theme default <index> - Load default theme by index".to_string(),
             "".to_string(),
             "Help:".to_string(),
             "  :help              - Show this help window".to_string(),
@@ -390,7 +492,15 @@ impl HelpWindow {
             "  F2                 - Toggle file explorer".to_string(),
             "  Ctrl+Q             - Quit editor".to_string(),
             "".to_string(),
+            "Examples:".to_string(),
+            "  :set rnu           - Enable relative line numbers".to_string(),
+            "  :set ts=2          - Set tab size to 2 spaces".to_string(),
+            "  :set rnu?          - Check if relative numbers are enabled".to_string(),
+            "  :goto 42           - Jump to line 42 (works with relative numbers)".to_string(),
+            "  :set et autosave   - Enable both expand tabs and auto-save".to_string(),
+            "".to_string(),
             "Press ESC to close this help window".to_string(),
+            "Use Up/Down arrow keys to scroll".to_string(),
         ];
 
         Self {
