@@ -67,7 +67,7 @@ impl Theme {
             background: Color::Rgb(30, 30, 30),      // #1e1e1e
             foreground: Color::Rgb(212, 212, 212),   // #d4d4d4
             cursor: Color::Rgb(255, 255, 0),         // #ffff00
-            selection: Color::Rgb(38, 79, 120),      // #264f78
+            selection: Color::Rgb(65, 105, 225),     // #4169e1 (Royal Blue - more visible)
             line_number: Color::Rgb(133, 133, 133),  // #858585
             current_line: Color::Rgb(45, 45, 45),    // #2d2d2d
             status_bg: Color::Rgb(0, 120, 215),      // #0078d7
@@ -90,7 +90,7 @@ impl Theme {
             background: Color::Rgb(255, 255, 255),   // #ffffff
             foreground: Color::Rgb(0, 0, 0),         // #000000
             cursor: Color::Rgb(0, 0, 255),           // #0000ff
-            selection: Color::Rgb(173, 216, 230),    // #add8e6
+            selection: Color::Rgb(70, 130, 180),     // #4682b4 (Steel Blue - more visible on light)
             line_number: Color::Rgb(128, 128, 128),  // #808080
             current_line: Color::Rgb(245, 245, 245), // #f5f5f5
             status_bg: Color::Rgb(0, 120, 215),      // #0078d7
@@ -121,7 +121,7 @@ impl EnhancedTheme {
             background: Color::Rgb(30, 30, 30),
             foreground: Color::Rgb(212, 212, 212),
             cursor: Color::Rgb(255, 255, 0),
-            selection: Color::Rgb(38, 79, 120),
+            selection: Color::Rgb(65, 105, 225),
             line_number: Color::Rgb(133, 133, 133),
             current_line: Color::Rgb(45, 45, 45),
             status_bg: Color::Rgb(0, 120, 215),

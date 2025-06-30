@@ -118,8 +118,7 @@ impl EventHandler {
 
         if key_event.modifiers.contains(KeyModifiers::CONTROL) {
             if key_event.modifiers.contains(KeyModifiers::SHIFT) {
-                // Ctrl+Shift combinations for word selection
-                match key_event.code {
+               match key_event.code {
                     KeyCode::Left => {
                         if !app.selection.active {
                             app.start_selection();
@@ -425,7 +424,6 @@ impl EventHandler {
 
         if key_event.modifiers.contains(KeyModifiers::CONTROL) {
             if key_event.modifiers.contains(KeyModifiers::SHIFT) {
-                // Ctrl+Shift combinations for word selection
                 match key_event.code {
                     KeyCode::Left => {
                         if !app.selection.active {
@@ -447,6 +445,57 @@ impl EventHandler {
                     }
                     _ => {}
                 }
+            }
+            
+            match key_event.code {
+                KeyCode::Char('z') => {
+                    app.undo();
+                    return Ok(());
+                }
+                KeyCode::Char('y') => {
+                    app.redo();
+                    return Ok(());
+                }
+                KeyCode::Char('c') => {
+                    app.copy_selection();
+                    if app.selection.active {
+                        app.set_status_message("Copied selection".to_string());
+                    }
+                    return Ok(());
+                }
+                KeyCode::Char('x') => {
+                    if app.selection.active {
+                        app.cut_selection();
+                        app.set_status_message("Cut selection".to_string());
+                    }
+                    return Ok(());
+                }
+                KeyCode::Char('v') => {
+                    app.paste();
+                    app.set_status_message("Pasted from clipboard".to_string());
+                    return Ok(());
+                }
+                KeyCode::Char('a') => {
+                    let line_count = app.current_buffer().line_count();
+                    let last_line_text = if line_count > 0 {
+                        app.current_buffer().line(line_count.saturating_sub(1))
+                    } else {
+                        None
+                    };
+
+                    if line_count > 0 {
+                        app.selection.start_selection(Cursor::new());
+                        let mut end_cursor = Cursor::new();
+                        end_cursor.line = line_count.saturating_sub(1);
+                        if let Some(last_line) = last_line_text {
+                            end_cursor.col = last_line.len();
+                        }
+                        app.selection.update_selection(end_cursor);
+                        app.set_status_message("Selected all text".to_string());
+                    }
+                    return Ok(());
+                }
+                _ => {}
             }
         }
 
@@ -508,7 +557,6 @@ impl EventHandler {
                 _ => {}
             }
         } else {
-            // Clear selection on normal movement
             if app.selection.active {
                 match key_event.code {
                     KeyCode::Left | KeyCode::Right | KeyCode::Up | KeyCode::Down => {
@@ -549,7 +597,6 @@ impl EventHandler {
                 app.cursor.move_line_end(&buffer);
             }
             KeyCode::Char(c) => {
-                // Delete selected text first if any
                 app.delete_selection();
                 
                 let cursor_line = app.cursor.line;
@@ -561,7 +608,6 @@ impl EventHandler {
                 app.cursor.move_right(&buffer);
             }
             KeyCode::Enter => {
-                // Delete selected text first if any
                 app.delete_selection();
                 
                 let cursor_line = app.cursor.line;
@@ -575,7 +621,6 @@ impl EventHandler {
                 app.cursor.move_line_start();
             }
             KeyCode::Backspace => {
-                // If there's a selection, delete it instead of normal backspace
                 if app.delete_selection() {
                     return Ok(());
                 }
@@ -589,7 +634,6 @@ impl EventHandler {
                     let buffer = app.current_buffer_mut();
                     buffer.delete_char(cursor_line, cursor_col);
                 } else if app.cursor.line > 0 {
-                    // Save undo state before joining lines
                     app.save_undo_state();
                     let prev_line_idx = app.cursor.line - 1;
                     let buffer = app.current_buffer().clone();
@@ -606,7 +650,6 @@ impl EventHandler {
                 }
             }
             KeyCode::Delete => {
-                // If there's a selection, delete it instead of normal delete
                 if app.delete_selection() {
                     return Ok(());
                 }
@@ -617,7 +660,6 @@ impl EventHandler {
                 buffer.delete_char(cursor_line, cursor_col);
             }
             KeyCode::Tab => {
-                // Delete selected text first if any
                 app.delete_selection();
                 
                 app.save_undo_state();
@@ -892,11 +934,9 @@ impl EventHandler {
             }
             "set" => {
                 if parts.len() == 1 {
-                    // Show all current settings
                     let settings = app.config.get_all_settings_display();
                     app.set_status_message(settings.join("\n"));
                 } else if parts.len() == 2 && parts[1] == "all" {
-                    // Show all settings with descriptions
                     let mut settings = app.config.get_all_settings_display();
                     settings.insert(0, "All Settings with Descriptions:".to_string());
                     settings.push("".to_string());
@@ -908,11 +948,9 @@ impl EventHandler {
                     settings.push("  so/scrolloffset    - Scroll offset".to_string());
                     app.set_status_message(settings.join("\n"));
                 } else {
-                    // Parse multiple settings at once
                     for i in 1..parts.len() {
                         let setting = parts[i];
                         
-                        // Handle query (setting?)
                         if setting.ends_with('?') {
                             let setting_name = &setting[..setting.len()-1];
                             let display = app.config.get_setting_display(setting_name);
@@ -920,11 +958,9 @@ impl EventHandler {
                             continue;
                         }
                         
-                        // Handle assignment (setting=value)
                         if let Some(eq_pos) = setting.find('=') {
                             let (key, value) = setting.split_at(eq_pos);
-                            let value = &value[1..]; // Skip the '=' character
-                            
+                            let value = &value[1..]; 
                             if let Err(e) = self.handle_set_assignment(app, key, value) {
                                 app.set_error_message(e.to_string());
                                 return Ok(());
@@ -932,7 +968,6 @@ impl EventHandler {
                             continue;
                         }
                         
-                        // Handle boolean flags and shortcuts
                         if let Err(e) = self.handle_set_flag(app, setting) {
                             app.set_error_message(e.to_string());
                             return Ok(());
