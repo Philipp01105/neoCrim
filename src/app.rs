@@ -23,6 +23,7 @@ pub struct App {
     pub help_window: HelpWindow,
     pub cursor_blink_state: bool,
     pub last_cursor_blink: Instant,
+    pub horizontal_scroll_offset: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -70,6 +71,7 @@ impl App {
             help_window: HelpWindow::new(),
             cursor_blink_state: true,
             last_cursor_blink: Instant::now(),
+            horizontal_scroll_offset: 0,
         })
     }
 
@@ -316,6 +318,40 @@ impl App {
 
     pub fn hide_help(&mut self) {
         self.help_window.hide();
+    }
+
+    pub fn update_horizontal_scroll(&mut self, viewport_width: usize) {
+        if self.config.editor.wrap_lines {
+            // Reset horizontal scroll when wrap is enabled
+            self.horizontal_scroll_offset = 0;
+            return;
+        }
+
+        let line_number_width = if self.config.editor.line_numbers || self.config.editor.relative_line_numbers {
+            if self.config.editor.relative_line_numbers { 5 } else { 4 }
+        } else {
+            0
+        };
+
+        let content_width = viewport_width.saturating_sub(line_number_width);
+        let scroll_margin = 5; // Keep some margin from the edge
+
+        // Ensure cursor is visible by adjusting horizontal scroll
+        if self.cursor.col < self.horizontal_scroll_offset + scroll_margin {
+            // Cursor is too far left, scroll left
+            self.horizontal_scroll_offset = self.cursor.col.saturating_sub(scroll_margin);
+        } else if self.cursor.col >= self.horizontal_scroll_offset + content_width - scroll_margin {
+            // Cursor is too far right, scroll right
+            self.horizontal_scroll_offset = self.cursor.col + scroll_margin - content_width + 1;
+        }
+    }
+
+    pub fn get_horizontal_scroll_offset(&self) -> usize {
+        if self.config.editor.wrap_lines {
+            0
+        } else {
+            self.horizontal_scroll_offset
+        }
     }
 }
 

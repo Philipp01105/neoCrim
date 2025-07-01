@@ -34,7 +34,8 @@ impl EditorView {
             0
         };
 
-        let _content_width = viewport_width.saturating_sub(line_number_width);
+        let content_width = viewport_width.saturating_sub(line_number_width);
+        let horizontal_scroll = app.get_horizontal_scroll_offset();
 
         let scroll_offset = app.config.editor.scroll_offset;
 
@@ -78,22 +79,42 @@ impl EditorView {
                 Style::default()
             };
 
+            // Handle horizontal scrolling for nowrap mode
+            let displayed_content = if !app.config.editor.wrap_lines {
+                // Apply horizontal scrolling by taking a substring
+                let start_col = horizontal_scroll;
+                let end_col = (start_col + content_width).min(line_content.len());
+                if start_col < line_content.len() {
+                    line_content[start_col..end_col].to_string()
+                } else {
+                    String::new()
+                }
+            } else {
+                line_content
+            };
+
             let spans = if line_number.is_empty() {
-                vec![Span::styled(line_content, style)]
+                vec![Span::styled(displayed_content, style)]
             } else {
                 vec![
                     Span::styled(line_number, Style::default().fg(self.theme.line_number)),
-                    Span::styled(line_content, style),
+                    Span::styled(displayed_content, style),
                 ]
             };
 
             lines.push(Line::from(spans));
         }
 
-        let paragraph = Paragraph::new(lines)
-            .style(Style::default().fg(self.theme.foreground).bg(self.theme.background))
-            .block(Block::default().borders(Borders::NONE))
-            .wrap(Wrap { trim: false });
+        let paragraph = if app.config.editor.wrap_lines {
+            Paragraph::new(lines)
+                .style(Style::default().fg(self.theme.foreground).bg(self.theme.background))
+                .block(Block::default().borders(Borders::NONE))
+                .wrap(Wrap { trim: false })
+        } else {
+            Paragraph::new(lines)
+                .style(Style::default().fg(self.theme.foreground).bg(self.theme.background))
+                .block(Block::default().borders(Borders::NONE))
+        };
 
         frame.render_widget(paragraph, area);
     }

@@ -44,6 +44,10 @@ fn main() -> Result<()> {
         app.update_cursor_blink();
         renderer.update_theme_with_effects(app.config.theme.clone(), &app.config.current_theme);
         
+        // Update horizontal scroll based on cursor position and viewport size
+        let (width, _) = crossterm::terminal::size()?;
+        app.update_horizontal_scroll(width as usize);
+        
         terminal.draw(|frame| {
             renderer.render(frame, &mut app);
         })?;

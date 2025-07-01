@@ -202,6 +202,7 @@ impl EventHandler {
                     let buffer = app.current_buffer().clone();
                     app.cursor.move_left(&buffer);
                     app.update_selection();
+                    app.update_horizontal_scroll(viewport_width);
                     return Ok(());
                 }
                 KeyCode::Right => {
@@ -211,6 +212,7 @@ impl EventHandler {
                     let buffer = app.current_buffer().clone();
                     app.cursor.move_right(&buffer);
                     app.update_selection();
+                    app.update_horizontal_scroll(viewport_width);
                     return Ok(());
                 }
                 KeyCode::Up => {
@@ -220,6 +222,7 @@ impl EventHandler {
                     let buffer = app.current_buffer().clone();
                     app.cursor.move_up(&buffer);
                     app.update_selection();
+                    app.update_horizontal_scroll(viewport_width);
                     return Ok(());
                 }
                 KeyCode::Down => {
@@ -229,6 +232,7 @@ impl EventHandler {
                     let buffer = app.current_buffer().clone();
                     app.cursor.move_down(&buffer);
                     app.update_selection();
+                    app.update_horizontal_scroll(viewport_width);
                     return Ok(());
                 }
                 KeyCode::Home => {
@@ -237,6 +241,7 @@ impl EventHandler {
                     }
                     app.cursor.move_line_start();
                     app.update_selection();
+                    app.update_horizontal_scroll(viewport_width);
                     return Ok(());
                 }
                 KeyCode::End => {
@@ -246,6 +251,7 @@ impl EventHandler {
                     let buffer = app.current_buffer().clone();
                     app.cursor.move_line_end(&buffer);
                     app.update_selection();
+                    app.update_horizontal_scroll(viewport_width);
                     return Ok(());
                 }
                 _ => {}
@@ -266,40 +272,50 @@ impl EventHandler {
             KeyCode::Char('h') | KeyCode::Left => {
                 let buffer = app.current_buffer().clone();
                 app.cursor.move_left(&buffer);
+                app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Char('j') | KeyCode::Down => {
                 let buffer = app.current_buffer().clone();
                 app.cursor.move_down_visual(&buffer, viewport_width);
+                app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Char('k') | KeyCode::Up => {
                 let buffer = app.current_buffer().clone();
                 app.cursor.move_up_visual(&buffer, viewport_width);
+                app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Char('l') | KeyCode::Right => {
                 let buffer = app.current_buffer().clone();
                 app.cursor.move_right(&buffer);
+                app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Char('w') => {
                 let buffer = app.current_buffer().clone();
                 app.cursor.move_word_forward(&buffer);
+                app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Char('b') => {
                 let buffer = app.current_buffer().clone();
                 app.cursor.move_word_backward(&buffer);
+                app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Char('0') => {
                 app.cursor.move_line_start();
+                app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Char('$') => {
                 let buffer = app.current_buffer().clone();
                 app.cursor.move_line_end(&buffer);
+                app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Char('g') => {
                 app.cursor.move_file_start();
+                app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Char('G') => {
                 let buffer = app.current_buffer().clone();
                 app.cursor.move_file_end(&buffer);
+                app.update_horizontal_scroll(viewport_width);
             }
 
             KeyCode::F(2) => {
@@ -508,6 +524,7 @@ impl EventHandler {
                     let buffer = app.current_buffer().clone();
                     app.cursor.move_left(&buffer);
                     app.update_selection();
+                    app.update_horizontal_scroll(viewport_width);
                     return Ok(());
                 }
                 KeyCode::Right => {
@@ -517,6 +534,7 @@ impl EventHandler {
                     let buffer = app.current_buffer().clone();
                     app.cursor.move_right(&buffer);
                     app.update_selection();
+                    app.update_horizontal_scroll(viewport_width);
                     return Ok(());
                 }
                 KeyCode::Up => {
@@ -543,6 +561,7 @@ impl EventHandler {
                     }
                     app.cursor.move_line_start();
                     app.update_selection();
+                    app.update_horizontal_scroll(viewport_width);
                     return Ok(());
                 }
                 KeyCode::End => {
@@ -552,6 +571,7 @@ impl EventHandler {
                     let buffer = app.current_buffer().clone();
                     app.cursor.move_line_end(&buffer);
                     app.update_selection();
+                    app.update_horizontal_scroll(viewport_width);
                     return Ok(());
                 }
                 _ => {}
@@ -576,25 +596,31 @@ impl EventHandler {
             KeyCode::Left => {
                 let buffer = app.current_buffer().clone();
                 app.cursor.move_left(&buffer);
+                app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Right => {
                 let buffer = app.current_buffer().clone();
                 app.cursor.move_right(&buffer);
+                app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Up => {
                 let buffer = app.current_buffer().clone();
                 app.cursor.move_up_visual(&buffer, viewport_width);
+                app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Down => {
                 let buffer = app.current_buffer().clone();
                 app.cursor.move_down_visual(&buffer, viewport_width);
+                app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Home => {
                 app.cursor.move_line_start();
+                app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::End => {
                 let buffer = app.current_buffer().clone();
                 app.cursor.move_line_end(&buffer);
+                app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Char(c) => {
                 app.delete_selection();
@@ -606,6 +632,7 @@ impl EventHandler {
 
                 let buffer = app.current_buffer().clone();
                 app.cursor.move_right(&buffer);
+                app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Enter => {
                 app.delete_selection();
@@ -619,9 +646,11 @@ impl EventHandler {
                 let buffer = app.current_buffer().clone();
                 app.cursor.move_down(&buffer);
                 app.cursor.move_line_start();
+                app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Backspace => {
                 if app.delete_selection() {
+                    app.update_horizontal_scroll(viewport_width);
                     return Ok(());
                 }
                 
@@ -633,6 +662,7 @@ impl EventHandler {
                     let cursor_col = app.cursor.col;
                     let buffer = app.current_buffer_mut();
                     buffer.delete_char(cursor_line, cursor_col);
+                    app.update_horizontal_scroll(viewport_width);
                 } else if app.cursor.line > 0 {
                     app.save_undo_state();
                     let prev_line_idx = app.cursor.line - 1;
@@ -647,10 +677,12 @@ impl EventHandler {
                     let cursor_col = app.cursor.col;
                     let buffer = app.current_buffer_mut();
                     buffer.delete_char(cursor_line, cursor_col);
+                    app.update_horizontal_scroll(viewport_width);
                 }
             }
             KeyCode::Delete => {
                 if app.delete_selection() {
+                    app.update_horizontal_scroll(viewport_width);
                     return Ok(());
                 }
                 
@@ -658,6 +690,7 @@ impl EventHandler {
                 let cursor_col = app.cursor.col;
                 let buffer = app.current_buffer_mut();
                 buffer.delete_char(cursor_line, cursor_col);
+                app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Tab => {
                 app.delete_selection();
@@ -673,6 +706,7 @@ impl EventHandler {
 
                 app.cursor.col += tab_size;
                 app.cursor.desired_col = app.cursor.col;
+                app.update_horizontal_scroll(viewport_width);
             }
             _ => {}
         }
@@ -915,11 +949,18 @@ impl EventHandler {
                     if let Ok(line_num) = parts[1].parse::<usize>() {
                         let buffer = app.current_buffer();
                         if line_num > 0 && line_num <= buffer.line_count() {
-                            app.cursor.line = line_num - 1;
-                            app.cursor.col = 0;
-                            app.cursor.desired_col = 0;
+                            if app.config.editor.relative_line_numbers {
+                                app.cursor.line += line_num;
+                                app.cursor.col = 0;
+                                app.cursor.desired_col = 0;
+                            } else {
+                                app.cursor.line = line_num - 1;
+                                app.cursor.col = 0;
+                                app.cursor.desired_col = 0;
+                            }
                             app.set_status_message(format!("Jumped to line {}", line_num));
-                        } else {
+                        } 
+                        else {
                             app.set_error_message(format!("Line {} out of range (1-{})", line_num, buffer.line_count()));
                         }
                     } else {
