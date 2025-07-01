@@ -213,7 +213,8 @@ impl Buffer {
 
     pub fn line(&self, line_idx: usize) -> Option<String> {
         if line_idx < self.content.len_lines() {
-            Some(self.content.line(line_idx).to_string())
+            let line_content = self.content.line(line_idx).to_string();
+            Some(crate::utils::text::TextUtils::trim_line_end(&line_content).to_string())
         } else {
             None
         }
@@ -298,7 +299,7 @@ impl Buffer {
         }
         
         let line_start = self.content.line_to_char(line);
-        let line_len = self.content.line(line).len_chars();
+        let line_len = self.line_len(line);
         
         if col <= line_len {
             Some(line_start + col)

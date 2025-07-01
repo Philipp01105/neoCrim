@@ -131,7 +131,11 @@ impl Renderer {
         let buffer = app.current_buffer();
         let cursor = &app.cursor;
 
+        log::info!("=== Starting render_editor ===");
+        log::info!("Area: {:?}, cursor: line={}, col={}", area, cursor.line, cursor.col);
+
         if buffer.is_terminal() {
+            log::info!("Buffer is terminal, delegating to render_terminal");
             self.render_terminal(frame, app, area);
             return;
         }
@@ -141,6 +145,13 @@ impl Renderer {
         let viewport_height = area.height as usize;
         let scroll_offset = app.config.editor.scroll_offset;
 
+        log::info!("Editor config: line_numbers={}, relative_line_numbers={}, wrap_lines={}", 
+                   app.config.editor.line_numbers, 
+                   app.config.editor.relative_line_numbers, 
+                   app.config.editor.wrap_lines);
+        log::info!("Layout: line_number_width={}, content_width={}, viewport_height={}, scroll_offset={}", 
+                   line_number_width, content_width, viewport_height, scroll_offset);
+
         let mut visual_lines = Vec::new();
         let mut current_visual_line = 0;
         let mut cursor_visual_line = 0;
@@ -149,40 +160,65 @@ impl Renderer {
             let line_content = buffer.line(line_idx).unwrap_or_default();
             let line_len = line_content.len();
             
+            log::info!("Processing line {}: length={}, content_preview=\"{}\"", 
+                       line_idx, line_len, 
+                       if line_content.len() > 50 { 
+                           format!("{}...", &line_content[..50]) 
+                       } else { 
+                           line_content.clone() 
+                       });
+            
             if !app.config.editor.wrap_lines || line_len <= content_width {
                 let displayed_content = if !app.config.editor.wrap_lines {
                     let h_offset = app.get_horizontal_scroll_offset();
                     if h_offset < line_len {
                         let end = (h_offset + content_width).min(line_len);
-                        line_content[h_offset..end].to_string()
+                        let result = line_content[h_offset..end].to_string();
+                        log::info!("  Line {} no-wrap: h_offset={}, showing chars {}..{}, content=\"{}\"", 
+                                   line_idx, h_offset, h_offset, end, result);
+                        result
                     } else {
+                        log::info!("  Line {} no-wrap: h_offset={} >= line_len={}, showing empty", 
+                                   line_idx, h_offset, line_len);
                         String::new()
                     }
                 } else {
+                    log::info!("  Line {} fits in viewport: showing full content", line_idx);
                     line_content.clone()
                 };
                 
                 visual_lines.push((line_idx, 0, displayed_content));
                 if line_idx == cursor.line {
                     cursor_visual_line = current_visual_line;
+                    log::info!("  Line {} is cursor line, cursor_visual_line={}", line_idx, cursor_visual_line);
                 }
                 current_visual_line += 1;
             } else {
                 let wrapped_lines = (line_len + content_width - 1) / content_width;
+                log::info!("  Line {} wrapping: {} visual lines needed", line_idx, wrapped_lines);
+                
                 for wrap_idx in 0..wrapped_lines {
                     let start = wrap_idx * content_width;
                     let end = (start + content_width).min(line_len);
                     let segment = line_content[start..end].to_string();
                     
+                    log::info!("    Wrap {} of line {}: chars {}..{}, content=\"{}\"", 
+                               wrap_idx, line_idx, start, end, segment);
+                    
                     visual_lines.push((line_idx, wrap_idx, segment));
                     
                     if line_idx == cursor.line && cursor.col >= start && cursor.col < end {
                         cursor_visual_line = current_visual_line;
+                        log::info!("    Cursor found in wrap {} of line {}, cursor_visual_line={}", 
+                                   wrap_idx, line_idx, cursor_visual_line);
                     }
                     current_visual_line += 1;
                 }
             }
         }
+
+        log::info!("Visual lines created: total={}, cursor at visual line={}", 
+                   visual_lines.len(), cursor_visual_line);
 
         let start_visual_line = if cursor_visual_line >= scroll_offset {
             (cursor_visual_line - scroll_offset).min(visual_lines.len().saturating_sub(viewport_height))
@@ -192,35 +228,51 @@ impl Renderer {
 
         let end_visual_line = (start_visual_line + viewport_height).min(visual_lines.len());
 
+        log::info!("Viewport: showing visual lines {} to {} (total viewport_height={})", 
+                   start_visual_line, end_visual_line, viewport_height);
+
         let mut lines = Vec::new();
         for visual_idx in start_visual_line..end_visual_line {
             if let Some((line_idx, wrap_idx, content)) = visual_lines.get(visual_idx) {
+                log::info!("Rendering visual line {}: line_idx={}, wrap_idx={}, content=\"{}\"", 
+                           visual_idx, line_idx, wrap_idx, content);
+
                 let line_number = if app.config.editor.relative_line_numbers {
                     if *wrap_idx == 0 {
                         if *line_idx == cursor.line {
-                            if app.config.editor.line_numbers {
+                            let line_num = if app.config.editor.line_numbers {
                                 format!("{:4} ", line_idx + 1)
                             } else {
                                 format!("{:4} ", 0)
-                            }
+                            };
+                            log::info!("  Line number (cursor line): \"{}\"", line_num.trim());
+                            line_num
                         } else {
                             let relative_distance = if *line_idx > cursor.line {
                                 *line_idx - cursor.line
                             } else {
                                 cursor.line - *line_idx
                             };
-                            format!("{:4} ", relative_distance)
+                            let line_num = format!("{:4} ", relative_distance);
+                            log::info!("  Line number (relative): distance={}, display=\"{}\"", 
+                                       relative_distance, line_num.trim());
+                            line_num
                         }
                     } else {
+                        log::info!("  Line number (wrap continuation): empty");
                         "     ".to_string()
                     }
                 } else if app.config.editor.line_numbers {
                     if *wrap_idx == 0 {
-                        format!("{:4} ", line_idx + 1)
+                        let line_num = format!("{:4} ", line_idx + 1);
+                        log::info!("  Line number (absolute): {}", line_num.trim());
+                        line_num
                     } else {
+                        log::info!("  Line number (wrap continuation): empty");
                         "     ".to_string()
                     }
                 } else {
+                    log::info!("  Line numbers disabled");
                     String::new()
                 };
 
@@ -234,12 +286,14 @@ impl Renderer {
                 if app.config.editor.syntax_highlighting {
                     if let Some(syntax) = buffer.file_path()
                         .and_then(|path| app.syntax_highlighter.detect_language(Some(path))) {
+                        log::info!("  Applying syntax highlighting for language: {:?}", syntax);
                         let highlighted_spans = app.syntax_highlighter.highlight_line(content, syntax, &app.config.current_theme.colors);
 
                         let mut processed_spans = Vec::new();
                         for (mut highlight_style, text) in highlighted_spans {
                             if *line_idx == cursor.line {
                                 highlight_style = highlight_style.bg(self.theme.current_line);
+                                log::info!("    Applied cursor line background to span: \"{}\"", text);
                             }
                             processed_spans.push(Span::styled(text, highlight_style));
                         }
@@ -247,17 +301,22 @@ impl Renderer {
                         let final_spans = self.apply_cursor_overlay(processed_spans, app, *line_idx, wrap_idx * content_width);
                         spans.extend(final_spans);
                     } else {
+                        log::info!("  No syntax highlighting available for this file");
                         let final_spans = self.apply_cursor_overlay(content_with_highlights, app, *line_idx, wrap_idx * content_width);
                         spans.extend(final_spans);
                     }
                 } else {
+                    log::info!("  Syntax highlighting disabled");
                     let final_spans = self.apply_cursor_overlay(content_with_highlights, app, *line_idx, wrap_idx * content_width);
                     spans.extend(final_spans);
                 }
 
+                log::info!("  Final spans count: {}", spans.len());
                 lines.push(Line::from(spans));
             }
         }
+
+        log::info!("Total rendered lines: {}", lines.len());
 
         let background_style = self.get_background_style(app);
         let paragraph = Paragraph::new(lines)
