@@ -61,6 +61,7 @@ fn main() -> Result<()> {
 
     loop {
         app.update_cursor_blink();
+        app.check_file_changes();
         renderer.update_theme_with_effects(app.config.theme.clone(), &app.config.current_theme);
         
         let (width, _) = crossterm::terminal::size()?;

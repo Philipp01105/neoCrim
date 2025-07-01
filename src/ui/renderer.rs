@@ -125,6 +125,10 @@ impl Renderer {
         if app.help_window.visible {
             self.render_help_window(frame, app, size);
         }
+
+        if app.file_change_dialog.visible {
+            self.render_file_change_dialog(frame, app, size);
+        }
     }
 
     fn render_editor(&self, frame: &mut Frame, app: &App, area: Rect) {
@@ -654,6 +658,79 @@ impl Renderer {
             
             frame.render_widget(info_paragraph, info_area);
         }
+    }
+
+    fn render_file_change_dialog(&self, frame: &mut Frame, app: &App, area: Rect) {
+        let window_width = 60;
+        let window_height = 8;
+        
+        let x = (area.width.saturating_sub(window_width)) / 2;
+        let y = (area.height.saturating_sub(window_height)) / 2;
+        
+        let dialog_area = Rect {
+            x: area.x + x,
+            y: area.y + y,
+            width: window_width,
+            height: window_height,
+        };
+
+        let clear_widget = ratatui::widgets::Clear;
+        frame.render_widget(clear_widget, dialog_area);
+
+        let file_name = app.file_change_dialog.changed_file
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("unknown");
+
+        let content = vec![
+            Line::from(""),
+            Line::from(format!(" File has been modified: {}", file_name)),
+            Line::from(""),
+            Line::from(" Choose action:"),
+            Line::from(""),
+        ];
+
+        let selected = app.file_change_dialog.selected_option;
+        
+        let option1_style = if selected == 0 {
+            Style::default().fg(Color::Black).bg(Color::Yellow)
+        } else {
+            Style::default().fg(self.theme.foreground)
+        };
+        
+        let option2_style = if selected == 1 {
+            Style::default().fg(Color::Black).bg(Color::Yellow)
+        } else {
+            Style::default().fg(self.theme.foreground)
+        };
+
+        let dialog_paragraph = Paragraph::new(content)
+            .style(Style::default().fg(self.theme.foreground).bg(self.theme.background))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(" File Changed ")
+                    .title_style(Style::default().fg(Color::Red).add_modifier(Modifier::BOLD))
+                    .border_style(Style::default().fg(Color::Red))
+            );
+
+        frame.render_widget(dialog_paragraph, dialog_area);
+
+        let buttons_area = Rect {
+            x: dialog_area.x + 2,
+            y: dialog_area.y + 5,
+            width: dialog_area.width.saturating_sub(4),
+            height: 1,
+        };
+
+        let button1 = Span::styled(" [R]eload from disk ", option1_style);
+        let spacer = Span::raw("  ");
+        let button2 = Span::styled(" [K]eep current ", option2_style);
+        
+        let buttons_line = Line::from(vec![button1, spacer, button2]);
+        let buttons_paragraph = Paragraph::new(vec![buttons_line]);
+        
+        frame.render_widget(buttons_paragraph, buttons_area);
     }
 
     fn get_background_style(&self, app: &App) -> Color {

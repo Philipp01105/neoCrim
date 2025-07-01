@@ -2,6 +2,7 @@ use crate::editor::{Buffer, Clipboard, Cursor, Mode, Selection};
 use crate::config::Config;
 use crate::ui::components::FileExplorer;
 use crate::syntax::SyntaxHighlighter;
+use crate::file::watcher::{FileWatcher, FileEvent};
 use crate::Result;
 use std::path::PathBuf;
 use std::time::Instant;
@@ -21,6 +22,8 @@ pub struct App {
     pub search_state: SearchState,
     pub error_message: Option<String>,
     pub help_window: HelpWindow,
+    pub file_change_dialog: FileChangeDialog,
+    pub file_watcher: FileWatcher,
     pub cursor_blink_state: bool,
     pub last_cursor_blink: Instant,
     pub horizontal_scroll_offset: usize,
@@ -31,6 +34,13 @@ pub struct HelpWindow {
     pub visible: bool,
     pub scroll_offset: usize,
     pub content: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct FileChangeDialog {
+    pub visible: bool,
+    pub changed_file: PathBuf,
+    pub selected_option: usize, 
 }
 
 #[derive(Debug, Clone)]
@@ -69,6 +79,8 @@ impl App {
             search_state: SearchState::new(),
             error_message: None,
             help_window: HelpWindow::new(),
+            file_change_dialog: FileChangeDialog::new(),
+            file_watcher: FileWatcher::new()?,
             cursor_blink_state: true,
             last_cursor_blink: Instant::now(),
             horizontal_scroll_offset: 0,
@@ -77,6 +89,11 @@ impl App {
 
     pub fn open_file(&mut self, path: PathBuf) -> Result<()> {
         let buffer = Buffer::from_file(&path)?;
+        if path.exists() {
+            if let Err(e) = self.file_watcher.watch(&path) {
+                log::warn!("Failed to watch file {:?}: {}", path, e);
+            }
+        }
         self.buffers.push(buffer);
         self.current_buffer = self.buffers.len() - 1;
         Ok(())
@@ -91,6 +108,9 @@ impl App {
 
         if path.exists() {
             let buffer = Buffer::from_file(&path)?;
+            if let Err(e) = self.file_watcher.watch(&path) {
+                log::warn!("Failed to watch file {:?}: {}", path, e);
+            }
             self.buffers.push(buffer);
             self.current_buffer = self.buffers.len() - 1;
             Ok(())
@@ -353,6 +373,52 @@ impl App {
             self.horizontal_scroll_offset
         }
     }
+
+    pub fn check_file_changes(&mut self) {
+        let events = self.file_watcher.poll_events();
+        for event in events {
+            match event {
+                FileEvent::Modified(path) => {
+                    if self.has_buffer_for_file(&path) && !self.file_change_dialog.visible {
+                        self.file_change_dialog.show(path);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    pub fn has_buffer_for_file(&self, path: &std::path::Path) -> bool {
+        self.buffers.iter().any(|buffer| {
+            buffer.file_path() == Some(path)
+        })
+    }
+
+    pub fn handle_file_change_dialog_action(&mut self, accept_storage: bool) -> Result<()> {
+        if !self.file_change_dialog.visible {
+            return Ok(());
+        }
+
+        let file_path = self.file_change_dialog.changed_file.clone();
+        self.file_change_dialog.hide();
+
+        if accept_storage {
+            self.save_undo_state();
+            self.reload_file(&file_path)?;
+        }
+
+        Ok(())
+    }
+
+    pub fn reload_file(&mut self, path: &std::path::Path) -> Result<()> {
+        for buffer in &mut self.buffers {
+            if buffer.file_path() == Some(path) {
+                buffer.reload_from_disk()?;
+                break;
+            }
+        }
+        Ok(())
+    }
 }
 
 impl SearchState {
@@ -566,6 +632,38 @@ impl HelpWindow {
         if self.scroll_offset < max_scroll {
             self.scroll_offset += 1;
         }
+    }
+}
+
+impl FileChangeDialog {
+    pub fn new() -> Self {
+        Self {
+            visible: false,
+            changed_file: PathBuf::new(),
+            selected_option: 0,
+        }
+    }
+
+    pub fn show(&mut self, file_path: PathBuf) {
+        self.visible = true;
+        self.changed_file = file_path;
+        self.selected_option = 0;
+    }
+
+    pub fn hide(&mut self) {
+        self.visible = false;
+    }
+
+    pub fn select_next(&mut self) {
+        self.selected_option = (self.selected_option + 1) % 2;
+    }
+
+    pub fn select_prev(&mut self) {
+        self.selected_option = if self.selected_option == 0 { 1 } else { 0 };
+    }
+
+    pub fn get_selected_option(&self) -> usize {
+        self.selected_option
     }
 }
 

@@ -247,6 +247,25 @@ impl Buffer {
         }
     }
 
+    pub fn reload_from_disk(&mut self) -> Result<()> {
+        if let Some(ref path) = self.file_path {
+            if path.exists() {
+                let content_str = std::fs::read_to_string(path)
+                    .with_context(|| format!("Failed to read file: {}", path.display()))?;
+                
+                self.content = Rope::from_str(&content_str);
+                self.is_modified = false;
+                
+                log::info!("Reloaded file from disk: {}", path.display());
+            } else {
+                return Err(anyhow::anyhow!("File no longer exists: {}", path.display()));
+            }
+        } else {
+            return Err(anyhow::anyhow!("Cannot reload buffer without file path"));
+        }
+        Ok(())
+    }
+
     pub fn is_terminal(&self) -> bool {
         matches!(self.buffer_type, BufferType::Terminal)
     }

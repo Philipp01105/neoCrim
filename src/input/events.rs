@@ -34,6 +34,38 @@ impl EventHandler {
     }
 
     fn handle_key_event(&mut self, app: &mut App, key_event: KeyEvent) -> Result<()> {
+        if app.file_change_dialog.visible {
+            match key_event.code {
+                KeyCode::Esc => {
+                    app.file_change_dialog.hide();
+                    return Ok(());
+                }
+                KeyCode::Char('r') | KeyCode::Char('R') => {
+                    app.handle_file_change_dialog_action(true)?;
+                    return Ok(());
+                }
+                KeyCode::Char('k') | KeyCode::Char('K') => {
+                    app.handle_file_change_dialog_action(false)?;
+                    return Ok(());
+                }
+                KeyCode::Left | KeyCode::Up => {
+                    app.file_change_dialog.select_prev();
+                    return Ok(());
+                }
+                KeyCode::Right | KeyCode::Down => {
+                    app.file_change_dialog.select_next();
+                    return Ok(());
+                }
+                KeyCode::Enter => {
+                    let accept_storage = app.file_change_dialog.selected_option == 0;
+                    app.handle_file_change_dialog_action(accept_storage)?;
+                    return Ok(());
+                }
+                _ => {}
+            }
+            return Ok(());
+        }
+
         if app.help_window.visible && key_event.code == KeyCode::Esc {
             app.hide_help();
             return Ok(());
