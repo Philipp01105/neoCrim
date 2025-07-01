@@ -300,67 +300,67 @@ impl Buffer {
         let line_start = self.content.line_to_char(line);
         let line_len = self.content.line(line).len_chars();
         
-        if col > line_len {
-            None
-        } else {
+        if col <= line_len {
             Some(line_start + col)
+        } else {
+            None
         }
     }
 
+    // Undo/Redo functionality
     pub fn save_state(&mut self, cursor: &Cursor) {
-        if matches!(self.buffer_type, BufferType::Terminal) {
-            return;
-        }
+        // Limit undo stack size to prevent memory issues
+        const MAX_UNDO_STATES: usize = 100;
 
-        let state = UndoState {
+        let undo_state = UndoState {
             content: self.content.clone(),
             cursor: cursor.clone(),
         };
         
-        const MAX_UNDO_STEPS: usize = 100;
-        if self.undo_stack.len() >= MAX_UNDO_STEPS {
+        self.undo_stack.push_back(undo_state);
+
+        // Remove oldest states if we exceed the limit
+        if self.undo_stack.len() > MAX_UNDO_STATES {
             self.undo_stack.pop_front();
         }
         
-        self.undo_stack.push_back(state);
+        // Clear redo stack when a new action is performed
         self.redo_stack.clear();
     }
 
     pub fn undo(&mut self) -> Option<Cursor> {
-        if matches!(self.buffer_type, BufferType::Terminal) {
-            return None;
-        }
-
-        if let Some(state) = self.undo_stack.pop_back() {
+        if let Some(undo_state) = self.undo_stack.pop_back() {
+            // Save current state to redo stack
             let current_state = UndoState {
                 content: self.content.clone(),
-                cursor: Cursor::new(), 
+                cursor: undo_state.cursor.clone(), // Use the cursor from undo state
             };
             self.redo_stack.push_back(current_state);
             
-            self.content = state.content;
+            // Restore previous state
+            self.content = undo_state.content;
             self.is_modified = true;
-            Some(state.cursor)
+
+            Some(undo_state.cursor)
         } else {
             None
         }
     }
 
     pub fn redo(&mut self) -> Option<Cursor> {
-        if matches!(self.buffer_type, BufferType::Terminal) {
-            return None;
-        }
-
-        if let Some(state) = self.redo_stack.pop_back() {
+        if let Some(redo_state) = self.redo_stack.pop_back() {
+            // Save current state to undo stack
             let current_state = UndoState {
                 content: self.content.clone(),
-                cursor: Cursor::new(),
+                cursor: redo_state.cursor.clone(), // Use the cursor from redo state
             };
             self.undo_stack.push_back(current_state);
             
-            self.content = state.content;
+            // Restore redo state
+            self.content = redo_state.content;
             self.is_modified = true;
-            Some(state.cursor)
+
+            Some(redo_state.cursor)
         } else {
             None
         }

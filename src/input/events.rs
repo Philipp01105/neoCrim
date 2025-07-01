@@ -275,11 +275,19 @@ impl EventHandler {
                 app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Char('j') | KeyCode::Down => {
+                if app.search_state.is_active && !app.search_state.results.is_empty() {
+                    app.search_next();
+                    return Ok(());
+                }
                 let buffer = app.current_buffer().clone();
                 app.cursor.move_down_visual(&buffer, viewport_width);
                 app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Char('k') | KeyCode::Up => {
+                if app.search_state.is_active && !app.search_state.results.is_empty() {
+                    app.search_previous();
+                    return Ok(());
+                }
                 let buffer = app.current_buffer().clone();
                 app.cursor.move_up_visual(&buffer, viewport_width);
                 app.update_horizontal_scroll(viewport_width);
@@ -625,6 +633,7 @@ impl EventHandler {
             KeyCode::Char(c) => {
                 app.delete_selection();
                 
+                app.save_undo_state();
                 let cursor_line = app.cursor.line;
                 let cursor_col = app.cursor.col;
                 let buffer = app.current_buffer_mut();
@@ -654,6 +663,7 @@ impl EventHandler {
                     return Ok(());
                 }
                 
+                app.save_undo_state();
                 if app.cursor.col > 0 {
                     let buffer = app.current_buffer().clone();
                     app.cursor.move_left(&buffer);
@@ -664,7 +674,6 @@ impl EventHandler {
                     buffer.delete_char(cursor_line, cursor_col);
                     app.update_horizontal_scroll(viewport_width);
                 } else if app.cursor.line > 0 {
-                    app.save_undo_state();
                     let prev_line_idx = app.cursor.line - 1;
                     let buffer = app.current_buffer().clone();
                     let prev_line_len = buffer.line_len(prev_line_idx);
@@ -686,6 +695,7 @@ impl EventHandler {
                     return Ok(());
                 }
                 
+                app.save_undo_state(); // Save state before delete operation
                 let cursor_line = app.cursor.line;
                 let cursor_col = app.cursor.col;
                 let buffer = app.current_buffer_mut();
@@ -922,52 +932,62 @@ impl EventHandler {
                     ));
                 }
             }
-            "find" | "f" => {
-                if parts.len() > 1 {
-                    let query = parts[1..].join(" ");
-                    app.search(&query);
-                } else {
-                    app.set_error_message("Usage: :find <pattern>".to_string());
-                }
-            }
-            "findnext" | "fn" => {
-                if app.search_state.is_active {
-                    app.search_next();
-                } else {
-                    app.set_error_message("No active search. Use :find <pattern> first".to_string());
-                }
-            }
-            "findprev" | "fp" => {
-                if app.search_state.is_active {
-                    app.search_previous();
-                } else {
-                    app.set_error_message("No active search. Use :find <pattern> first".to_string());
-                }
-            }
             "goto" | "g" => {
                 if parts.len() > 1 {
-                    if let Ok(line_num) = parts[1].parse::<usize>() {
+                    let arg = parts[1];
+                    
+                    if arg.ends_with('j') || arg.ends_with('k') {
+                        let direction = arg.chars().last().unwrap();
+                        let number_part = &arg[..arg.len()-1];
+                        
+                        if let Ok(steps) = number_part.parse::<usize>() {
+                            let buffer = app.current_buffer();
+                            match direction {
+                                'j' => {
+                                    app.cursor.line = (app.cursor.line + steps).min(buffer.line_count().saturating_sub(1));
+                                }
+                                'k' => {
+                                    app.cursor.line = app.cursor.line.saturating_sub(steps);
+                                }
+                                _ => unreachable!()
+                            }
+                            app.cursor.col = 0;
+                            app.cursor.desired_col = 0;
+                            app.set_status_message(format!("Moved {} lines {}", steps, 
+                                if direction == 'j' { "down" } else { "up" }));
+                        } else {
+                            app.set_error_message("Invalid number in goto command".to_string());
+                        }
+                    }
+                    else if let Ok(line_num) = arg.parse::<usize>() {
                         let buffer = app.current_buffer();
                         if line_num > 0 && line_num <= buffer.line_count() {
                             if app.config.editor.relative_line_numbers {
-                                app.cursor.line += line_num;
-                                app.cursor.col = 0;
-                                app.cursor.desired_col = 0;
+                                if line_num <= app.cursor.line {
+                                    app.cursor.line = app.cursor.line.saturating_sub(line_num);
+                                } else {
+                                    app.cursor.line = (app.cursor.line + line_num).min(buffer.line_count() - 1);
+                                }
                             } else {
+                                // Absolute line number
                                 app.cursor.line = line_num - 1;
-                                app.cursor.col = 0;
-                                app.cursor.desired_col = 0;
                             }
+                            app.cursor.col = 0;
+                            app.cursor.desired_col = 0;
                             app.set_status_message(format!("Jumped to line {}", line_num));
-                        } 
-                        else {
+                        } else {
                             app.set_error_message(format!("Line {} out of range (1-{})", line_num, buffer.line_count()));
                         }
                     } else {
-                        app.set_error_message("Usage: :goto <line_number>".to_string());
+                        // Not a number, treat as search pattern
+                        let query = parts[1..].join(" ");
+                        app.search(&query);
+                        if !app.search_state.results.is_empty() {
+                            app.set_status_message(format!("Found {} matches - Use Up/Down arrows to navigate", app.search_state.results.len()));
+                        }
                     }
                 } else {
-                    app.set_error_message("Usage: :goto <line_number>".to_string());
+                    app.set_error_message("Usage: :goto <line_number> or :goto <number>j/k or :goto <search_pattern>".to_string());
                 }
             }
             "help" | "h" => {
