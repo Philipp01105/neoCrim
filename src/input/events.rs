@@ -761,13 +761,100 @@ impl EventHandler {
     }
 
     fn handle_visual_mode(&mut self, app: &mut App, key_event: KeyEvent) -> Result<()> {
+        let viewport_width = self.get_viewport_width(app).unwrap_or(80);
+
+        if !app.selection.active {
+            app.start_selection();
+        }
+
         match key_event.code {
             KeyCode::Esc => {
+                app.clear_selection();
                 app.mode = Mode::Normal;
             }
-            _ => {
-                self.handle_normal_mode(app, key_event)?;
+            KeyCode::Char('h') | KeyCode::Left => {
+                let buffer = app.current_buffer().clone();
+                app.cursor.move_left(&buffer);
+                app.update_selection();
+                app.update_horizontal_scroll(viewport_width);
             }
+            KeyCode::Char('j') | KeyCode::Down => {
+                let buffer = app.current_buffer().clone();
+                if app.config.editor.wrap_lines {
+                    app.cursor.move_down_visual(&buffer, viewport_width);
+                } else {
+                    app.cursor.move_down(&buffer);
+                }
+                app.update_selection();
+                app.update_horizontal_scroll(viewport_width);
+            }
+            KeyCode::Char('k') | KeyCode::Up => {
+                let buffer = app.current_buffer().clone();
+                if app.config.editor.wrap_lines {
+                    app.cursor.move_up_visual(&buffer, viewport_width);
+                } else {
+                    app.cursor.move_up(&buffer);
+                }
+                app.update_selection();
+                app.update_horizontal_scroll(viewport_width);
+            }
+            KeyCode::Char('l') | KeyCode::Right => {
+                let buffer = app.current_buffer().clone();
+                app.cursor.move_right(&buffer);
+                app.update_selection();
+                app.update_horizontal_scroll(viewport_width);
+            }
+            KeyCode::Char('w') => {
+                let buffer = app.current_buffer().clone();
+                app.cursor.move_word_forward(&buffer);
+                app.update_selection();
+                app.update_horizontal_scroll(viewport_width);
+            }
+            KeyCode::Char('b') => {
+                let buffer = app.current_buffer().clone();
+                app.cursor.move_word_backward(&buffer);
+                app.update_selection();
+                app.update_horizontal_scroll(viewport_width);
+            }
+            KeyCode::Char('0') => {
+                app.cursor.move_line_start();
+                app.update_selection();
+                app.update_horizontal_scroll(viewport_width);
+            }
+            KeyCode::Char('$') => {
+                let buffer = app.current_buffer().clone();
+                app.cursor.move_line_end(&buffer);
+                app.update_selection();
+                app.update_horizontal_scroll(viewport_width);
+            }
+            KeyCode::Char('g') => {
+                app.cursor.move_file_start();
+                app.update_selection();
+                app.update_horizontal_scroll(viewport_width);
+            }
+            KeyCode::Char('G') => {
+                let buffer = app.current_buffer().clone();
+                app.cursor.move_file_end(&buffer);
+                app.update_selection();
+                app.update_horizontal_scroll(viewport_width);
+            }
+            KeyCode::Char('y') => {
+                app.copy_selection();
+                app.set_status_message("Yanked selection".to_string());
+                app.clear_selection();
+                app.mode = Mode::Normal;
+            }
+            KeyCode::Char('d') => {
+                app.delete_selection();
+                app.set_status_message("Deleted selection".to_string());
+                app.mode = Mode::Normal;
+            }
+            KeyCode::Char('x') => {
+                app.cut_selection();
+                app.set_status_message("Cut selection".to_string());
+                app.mode = Mode::Normal;
+            }
+            _ => {}
         }
         Ok(())
     }
