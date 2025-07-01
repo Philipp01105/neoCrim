@@ -66,7 +66,7 @@ impl EventHandler {
         let (width, _) = terminal::size()?;
         let mut viewport_width = width as usize;
 
-        if app.config.editor.line_numbers {
+        if app.config.editor.line_numbers || app.config.editor.relative_line_numbers {
             viewport_width = viewport_width.saturating_sub(5);
         }
 
@@ -269,6 +269,11 @@ impl EventHandler {
         }
 
         match key_event.code {
+            KeyCode::Char(':') => {
+                app.mode = Mode::Command;
+                app.command_line.clear();
+                app.clear_error_message();
+            }
             KeyCode::Char('h') | KeyCode::Left => {
                 let buffer = app.current_buffer().clone();
                 app.cursor.move_left(&buffer);
@@ -280,7 +285,11 @@ impl EventHandler {
                     return Ok(());
                 }
                 let buffer = app.current_buffer().clone();
-                app.cursor.move_down_visual(&buffer, viewport_width);
+                if app.config.editor.wrap_lines {
+                    app.cursor.move_down_visual(&buffer, viewport_width);
+                } else {
+                    app.cursor.move_down(&buffer);
+                }
                 app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Char('k') | KeyCode::Up => {
@@ -289,7 +298,11 @@ impl EventHandler {
                     return Ok(());
                 }
                 let buffer = app.current_buffer().clone();
-                app.cursor.move_up_visual(&buffer, viewport_width);
+                if app.config.editor.wrap_lines {
+                    app.cursor.move_up_visual(&buffer, viewport_width);
+                } else {
+                    app.cursor.move_up(&buffer);
+                }
                 app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Char('l') | KeyCode::Right => {
@@ -338,11 +351,13 @@ impl EventHandler {
                 app.save_undo_state();
                 let buffer = app.current_buffer().clone();
                 app.cursor.move_right(&buffer);
+                app.update_horizontal_scroll(viewport_width);
                 app.mode = Mode::Insert;
             }
             KeyCode::Char('o') => {
                 let buffer = app.current_buffer().clone();
                 app.cursor.move_line_end(&buffer);
+                app.update_horizontal_scroll(viewport_width);
 
                 let cursor_line = app.cursor.line;
                 let cursor_col = app.cursor.col;
@@ -354,14 +369,11 @@ impl EventHandler {
                 app.cursor.line += 1;
                 app.cursor.col = 0;
                 app.cursor.desired_col = 0;
+                app.update_horizontal_scroll(viewport_width);
                 app.mode = Mode::Insert;
             }
             KeyCode::Char('v') => {
                 app.mode = Mode::Visual;
-            }
-            KeyCode::Char(':') => {
-                app.mode = Mode::Command;
-                app.command_line.clear();
             }
 
             KeyCode::Char('x') => {
@@ -389,8 +401,7 @@ impl EventHandler {
             _ => {}
         }
 
-        let buffer = app.current_buffer().clone();
-        app.cursor.clamp_to_buffer(&buffer);
+        app.update_horizontal_scroll(viewport_width);
         Ok(())
     }
 
@@ -550,8 +561,9 @@ impl EventHandler {
                         app.start_selection();
                     }
                     let buffer = app.current_buffer().clone();
-                    app.cursor.move_up_visual(&buffer, viewport_width);
+                    app.cursor.move_up_insert_mode(&buffer);
                     app.update_selection();
+                    app.update_horizontal_scroll(viewport_width);
                     return Ok(());
                 }
                 KeyCode::Down => {
@@ -559,8 +571,9 @@ impl EventHandler {
                         app.start_selection();
                     }
                     let buffer = app.current_buffer().clone();
-                    app.cursor.move_down_visual(&buffer, viewport_width);
+                    app.cursor.move_down_insert_mode(&buffer);
                     app.update_selection();
+                    app.update_horizontal_scroll(viewport_width);
                     return Ok(());
                 }
                 KeyCode::Home => {
@@ -599,26 +612,42 @@ impl EventHandler {
             KeyCode::Esc => {
                 app.mode = Mode::Normal;
                 app.clear_selection();
+                
+                let buffer = app.current_buffer().clone();
+                let line_len = buffer.line_len(app.cursor.line);
+                if line_len > 0 && app.cursor.col > line_len {
+                    app.cursor.col = line_len;
+                    app.cursor.desired_col = app.cursor.col;
+                }
+                app.update_horizontal_scroll(viewport_width);
             }
 
             KeyCode::Left => {
                 let buffer = app.current_buffer().clone();
-                app.cursor.move_left(&buffer);
+                app.cursor.move_left_insert_mode(&buffer);
                 app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Right => {
                 let buffer = app.current_buffer().clone();
-                app.cursor.move_right(&buffer);
+                app.cursor.move_right_insert_mode(&buffer);
                 app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Up => {
                 let buffer = app.current_buffer().clone();
-                app.cursor.move_up_visual(&buffer, viewport_width);
+                if app.config.editor.wrap_lines {
+                    app.cursor.move_up_visual(&buffer, viewport_width);
+                } else {
+                    app.cursor.move_up_insert_mode(&buffer);
+                }
                 app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Down => {
                 let buffer = app.current_buffer().clone();
-                app.cursor.move_down_visual(&buffer, viewport_width);
+                if app.config.editor.wrap_lines {
+                    app.cursor.move_down_visual(&buffer, viewport_width);
+                } else {
+                    app.cursor.move_down_insert_mode(&buffer);
+                }
                 app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Home => {
@@ -631,16 +660,22 @@ impl EventHandler {
                 app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Char(c) => {
-                app.delete_selection();
+                if c == ':' && app.config.editor.fast_command_line {
+                    app.mode = Mode::Command;
+                    return Ok(());
+                }
                 
+                app.delete_selection();
                 app.save_undo_state();
+                
                 let cursor_line = app.cursor.line;
                 let cursor_col = app.cursor.col;
                 let buffer = app.current_buffer_mut();
                 buffer.insert_char(cursor_line, cursor_col, c);
-
-                let buffer = app.current_buffer().clone();
-                app.cursor.move_right(&buffer);
+                
+                app.cursor.col += 1;
+                app.cursor.desired_col = app.cursor.col;
+                
                 app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Enter => {
@@ -695,7 +730,7 @@ impl EventHandler {
                     return Ok(());
                 }
                 
-                app.save_undo_state(); // Save state before delete operation
+                app.save_undo_state(); 
                 let cursor_line = app.cursor.line;
                 let cursor_col = app.cursor.col;
                 let buffer = app.current_buffer_mut();
@@ -721,8 +756,7 @@ impl EventHandler {
             _ => {}
         }
 
-        let buffer = app.current_buffer().clone();
-        app.cursor.clamp_to_buffer(&buffer);
+        app.update_horizontal_scroll(viewport_width);
         Ok(())
     }
 
@@ -969,7 +1003,6 @@ impl EventHandler {
                                     app.cursor.line = (app.cursor.line + line_num).min(buffer.line_count() - 1);
                                 }
                             } else {
-                                // Absolute line number
                                 app.cursor.line = line_num - 1;
                             }
                             app.cursor.col = 0;
@@ -979,7 +1012,6 @@ impl EventHandler {
                             app.set_error_message(format!("Line {} out of range (1-{})", line_num, buffer.line_count()));
                         }
                     } else {
-                        // Not a number, treat as search pattern
                         let query = parts[1..].join(" ");
                         app.search(&query);
                         if !app.search_state.results.is_empty() {
@@ -1197,6 +1229,19 @@ impl EventHandler {
                     _ => return Err(anyhow::anyhow!("Invalid value for command line: {} (use true/false)", value)),
                 }
             }
+            "fastcl" | "fastcommandline" | "fast_command_line" => {
+                match value.to_lowercase().as_str() {
+                    "true" | "1" => {
+                        app.config.set_fast_command_line(true)?;
+                        app.set_status_message("Fast command line enabled".to_string());
+                    }
+                    "false" | "0" => {
+                        app.config.set_fast_command_line(false)?;
+                        app.set_status_message("Fast command line disabled".to_string());
+                    }
+                    _ => return Err(anyhow::anyhow!("Invalid value for fast command line: {} (use true/false)", value)),
+                }
+            }
             _ => {
                 return Err(anyhow::anyhow!("Unknown setting: {}", key));
             }
@@ -1253,6 +1298,14 @@ impl EventHandler {
             "nosyntax" => {
                 app.config.set_syntax_highlighting(false)?;
                 app.set_status_message("Syntax highlighting disabled".to_string());
+            }
+            "fastcl" | "fastcommandline" => {
+                app.config.set_fast_command_line(true)?;
+                app.set_status_message("Fast command line enabled".to_string());
+            }
+            "nofastcl" | "nofastcommandline" => {
+                app.config.set_fast_command_line(false)?;
+                app.set_status_message("Fast command line disabled".to_string());
             }
             _ => {
                 return Err(anyhow::anyhow!("Unknown setting: {}. Use ':set' to see available options", flag));

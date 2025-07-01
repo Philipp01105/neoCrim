@@ -79,9 +79,7 @@ impl EditorView {
                 Style::default()
             };
 
-            // Handle horizontal scrolling for nowrap mode
             let displayed_content = if !app.config.editor.wrap_lines {
-                // Apply horizontal scrolling by taking a substring
                 let start_col = horizontal_scroll;
                 let end_col = (start_col + content_width).min(line_content.len());
                 if start_col < line_content.len() {

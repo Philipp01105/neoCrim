@@ -240,6 +240,60 @@ impl Cursor {
         
         self.desired_col = self.col;
     }
+
+    pub fn clamp_to_buffer_insert_mode(&mut self, buffer: &Buffer) {
+        if self.line >= buffer.line_count() {
+            self.line = buffer.line_count().saturating_sub(1);
+        }
+        
+        let line_len = buffer.line_len(self.line);
+        if self.col > line_len + 1 {
+            self.col = line_len + 1;
+        }
+        
+        self.desired_col = self.col;
+    }
+
+    pub fn move_right_insert_mode(&mut self, buffer: &Buffer) {
+        self.col += 1;
+        self.desired_col = self.col;
+        
+        let line_len = buffer.line_len(self.line);
+        if self.col > line_len + 10 && self.line + 1 < buffer.line_count() {
+            self.line += 1;
+            self.col = 0;
+            self.desired_col = 0;
+        }
+    }
+
+    pub fn move_left_insert_mode(&mut self, _buffer: &Buffer) {
+        if self.col > 0 {
+            self.col -= 1;
+            self.desired_col = self.col;
+        }
+    }
+
+    pub fn move_up_insert_mode(&mut self, buffer: &Buffer) {
+        if self.line > 0 {
+            self.line -= 1;
+            let line_len = buffer.line_len(self.line);
+            if self.col > line_len + 1 {
+                self.col = line_len + 1; 
+            }
+            self.desired_col = self.col;
+        }
+    }
+
+    pub fn move_down_insert_mode(&mut self, buffer: &Buffer) {
+        if self.line + 1 < buffer.line_count() {
+            self.line += 1;
+            let line_len = buffer.line_len(self.line);
+            if self.col > line_len + 1 {
+                self.col = line_len + 1; 
+            }
+            self.desired_col = self.col;
+        }
+    }
 }
 
 impl Default for Cursor {

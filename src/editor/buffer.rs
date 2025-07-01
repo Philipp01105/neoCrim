@@ -307,9 +307,7 @@ impl Buffer {
         }
     }
 
-    // Undo/Redo functionality
     pub fn save_state(&mut self, cursor: &Cursor) {
-        // Limit undo stack size to prevent memory issues
         const MAX_UNDO_STATES: usize = 100;
 
         let undo_state = UndoState {
@@ -319,25 +317,21 @@ impl Buffer {
         
         self.undo_stack.push_back(undo_state);
 
-        // Remove oldest states if we exceed the limit
         if self.undo_stack.len() > MAX_UNDO_STATES {
             self.undo_stack.pop_front();
         }
         
-        // Clear redo stack when a new action is performed
         self.redo_stack.clear();
     }
 
     pub fn undo(&mut self) -> Option<Cursor> {
         if let Some(undo_state) = self.undo_stack.pop_back() {
-            // Save current state to redo stack
             let current_state = UndoState {
                 content: self.content.clone(),
-                cursor: undo_state.cursor.clone(), // Use the cursor from undo state
+                cursor: undo_state.cursor.clone(), 
             };
             self.redo_stack.push_back(current_state);
             
-            // Restore previous state
             self.content = undo_state.content;
             self.is_modified = true;
 
@@ -349,14 +343,12 @@ impl Buffer {
 
     pub fn redo(&mut self) -> Option<Cursor> {
         if let Some(redo_state) = self.redo_stack.pop_back() {
-            // Save current state to undo stack
             let current_state = UndoState {
                 content: self.content.clone(),
-                cursor: redo_state.cursor.clone(), // Use the cursor from redo state
+                cursor: redo_state.cursor.clone(), 
             };
             self.undo_stack.push_back(current_state);
             
-            // Restore redo state
             self.content = redo_state.content;
             self.is_modified = true;
 

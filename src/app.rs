@@ -322,7 +322,6 @@ impl App {
 
     pub fn update_horizontal_scroll(&mut self, viewport_width: usize) {
         if self.config.editor.wrap_lines {
-            // Reset horizontal scroll when wrap is enabled
             self.horizontal_scroll_offset = 0;
             return;
         }
@@ -334,14 +333,15 @@ impl App {
         };
 
         let content_width = viewport_width.saturating_sub(line_number_width);
-        let scroll_margin = 5; // Keep some margin from the edge
+        let scroll_margin = 5;
 
-        // Ensure cursor is visible by adjusting horizontal scroll
-        if self.cursor.col < self.horizontal_scroll_offset + scroll_margin {
-            // Cursor is too far left, scroll left
+        if self.cursor.col < self.horizontal_scroll_offset {
+            self.horizontal_scroll_offset = self.cursor.col;
+        } else if self.cursor.col >= self.horizontal_scroll_offset + content_width {
+            self.horizontal_scroll_offset = self.cursor.col - content_width + 1;
+        } else if self.cursor.col < self.horizontal_scroll_offset + scroll_margin && self.horizontal_scroll_offset > 0 {
             self.horizontal_scroll_offset = self.cursor.col.saturating_sub(scroll_margin);
         } else if self.cursor.col >= self.horizontal_scroll_offset + content_width - scroll_margin {
-            // Cursor is too far right, scroll right
             self.horizontal_scroll_offset = self.cursor.col + scroll_margin - content_width + 1;
         }
     }

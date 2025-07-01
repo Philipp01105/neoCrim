@@ -28,6 +28,7 @@ pub struct EditorConfig {
     pub wrap_lines: bool,
     pub scroll_offset: usize,
     pub syntax_highlighting: bool,
+    pub fast_command_line: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -221,6 +222,12 @@ impl Config {
         Ok(())
     }
 
+    pub fn set_fast_command_line(&mut self, value: bool) -> Result<()> {
+        self.editor.fast_command_line = value;
+        self.save()?;
+        Ok(())
+    }
+
     pub fn set_show_status_line(&mut self, value: bool) -> Result<()> {
         self.ui.show_status_line = value;
         self.save()?;
@@ -271,6 +278,9 @@ impl Config {
             "theme" => {
                 format!("theme = {}", self.ui.theme)
             }
+            "fastcommandline" | "fast_command_line" | "fastcl" => {
+                format!("fast_command_line = {}", self.editor.fast_command_line)
+            }
             _ => format!("Unknown setting: {}", setting)
         }
     }
@@ -286,6 +296,7 @@ impl Config {
             format!("  wrap_lines = {}", self.editor.wrap_lines),
             format!("  scroll_offset = {}", self.editor.scroll_offset),
             format!("  syntax_highlighting = {}", self.editor.syntax_highlighting),
+            format!("  fast_command_line = {}", self.editor.fast_command_line),
             format!(""),
             format!("UI Settings:"),
             format!("  cursor_blink = {}", self.ui.cursor_blink),
@@ -312,6 +323,7 @@ impl Default for Config {
                 wrap_lines: false,
                 scroll_offset: 5,
                 syntax_highlighting: true,
+                fast_command_line: false,
             },
             ui: UiConfig {
                 theme: "dark".to_string(),

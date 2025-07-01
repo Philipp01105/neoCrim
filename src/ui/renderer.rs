@@ -2,7 +2,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Clear, Paragraph},
+    widgets::{Block, Borders, Paragraph},
     Frame,
 };
 use crate::app::App;
@@ -150,7 +150,19 @@ impl Renderer {
             let line_len = line_content.len();
             
             if !app.config.editor.wrap_lines || line_len <= content_width {
-                visual_lines.push((line_idx, 0, line_content.clone()));
+                let displayed_content = if !app.config.editor.wrap_lines {
+                    let h_offset = app.get_horizontal_scroll_offset();
+                    if h_offset < line_len {
+                        let end = (h_offset + content_width).min(line_len);
+                        line_content[h_offset..end].to_string()
+                    } else {
+                        String::new()
+                    }
+                } else {
+                    line_content.clone()
+                };
+                
+                visual_lines.push((line_idx, 0, displayed_content));
                 if line_idx == cursor.line {
                     cursor_visual_line = current_visual_line;
                 }
@@ -224,18 +236,23 @@ impl Renderer {
                         .and_then(|path| app.syntax_highlighter.detect_language(Some(path))) {
                         let highlighted_spans = app.syntax_highlighter.highlight_line(content, syntax, &app.config.current_theme.colors);
 
+                        let mut processed_spans = Vec::new();
                         for (mut highlight_style, text) in highlighted_spans {
                             if *line_idx == cursor.line {
                                 highlight_style = highlight_style.bg(self.theme.current_line);
                             }
-                            
-                            spans.push(Span::styled(text, highlight_style));
+                            processed_spans.push(Span::styled(text, highlight_style));
                         }
+                        
+                        let final_spans = self.apply_cursor_overlay(processed_spans, app, *line_idx, wrap_idx * content_width);
+                        spans.extend(final_spans);
                     } else {
-                        spans.extend(content_with_highlights);
+                        let final_spans = self.apply_cursor_overlay(content_with_highlights, app, *line_idx, wrap_idx * content_width);
+                        spans.extend(final_spans);
                     }
                 } else {
-                    spans.extend(content_with_highlights);
+                    let final_spans = self.apply_cursor_overlay(content_with_highlights, app, *line_idx, wrap_idx * content_width);
+                    spans.extend(final_spans);
                 }
 
                 lines.push(Line::from(spans));
@@ -248,47 +265,78 @@ impl Renderer {
             .block(Block::default().borders(Borders::NONE));
 
         frame.render_widget(paragraph, area);
-
-        self.render_cursor_visual(frame, app, area, start_visual_line, &visual_lines);
     }
 
-    fn render_cursor_visual(&self, frame: &mut Frame, app: &App, area: Rect, start_visual_line: usize, visual_lines: &[(usize, usize, String)]) {
-        let cursor = &app.cursor;
-        let line_number_width = if app.config.editor.line_numbers || app.config.editor.relative_line_numbers { 5 } else { 0 };
-        let content_width = area.width as usize - line_number_width;
-
-        for (visual_idx, (line_idx, wrap_idx, _content)) in visual_lines.iter().enumerate() {
-            if *line_idx == cursor.line {
-                let start_col = wrap_idx * content_width;
-                let end_col = start_col + content_width;
-                
-                if cursor.col >= start_col && cursor.col < end_col {
-                    let visual_line_idx = visual_idx;
-                    
-                    if visual_line_idx >= start_visual_line && visual_line_idx < start_visual_line + area.height as usize {
-                        let cursor_y = area.y + (visual_line_idx - start_visual_line) as u16;
-                        let cursor_x = area.x + line_number_width as u16 + (cursor.col - start_col) as u16;
-
-                        if cursor_x < area.x + area.width && cursor_y < area.y + area.height && app.should_show_cursor() {
-                            let cursor_area = Rect {
-                                x: cursor_x,
-                                y: cursor_y,
-                                width: 1,
-                                height: 1,
-                            };
-
-                            let cursor_char = if app.mode.is_insert() { "|" } else { "█" };
-                            let cursor_widget = Paragraph::new(cursor_char)
-                                .style(Style::default().fg(self.theme.cursor).add_modifier(Modifier::BOLD));
-
-                            frame.render_widget(Clear, cursor_area);
-                            frame.render_widget(cursor_widget, cursor_area);
-                        }
-                    }
-                    break;
-                }
-            }
+    fn apply_cursor_overlay<'a>(&self, spans: Vec<Span<'a>>, app: &App, line_idx: usize, line_start_col: usize) -> Vec<Span<'a>> {
+        if line_idx != app.cursor.line || !app.should_show_cursor() {
+            return spans;
         }
+
+        let h_offset = app.get_horizontal_scroll_offset();
+        let cursor_col = app.cursor.col;
+        
+        let cursor_pos_in_segment = if cursor_col >= h_offset + line_start_col {
+            cursor_col - h_offset - line_start_col
+        } else {
+            return spans;
+        };
+        
+        self.apply_normal_cursor(spans, cursor_pos_in_segment)
+    }
+
+
+    fn apply_normal_cursor<'a>(&self, spans: Vec<Span<'a>>, cursor_pos: usize) -> Vec<Span<'a>> {
+        let mut result = Vec::new();
+        let mut current_pos = 0;
+        let mut cursor_applied = false;
+
+        for span in spans {
+            let span_text = span.content.as_ref();
+            let span_len = span_text.chars().count();
+            
+            if current_pos <= cursor_pos && cursor_pos < current_pos + span_len {
+                let chars: Vec<char> = span_text.chars().collect();
+                let split_pos = cursor_pos - current_pos;
+                
+                if split_pos > 0 {
+                    let before_text: String = chars[0..split_pos].iter().collect();
+                    result.push(Span::styled(before_text, span.style));
+                }
+                
+                if split_pos < chars.len() {
+                    let cursor_char = chars[split_pos].to_string();
+                    result.push(Span::styled(cursor_char, Style::default()
+                        .fg(self.theme.background)
+                        .bg(self.theme.cursor)
+                        .add_modifier(Modifier::BOLD)));
+                } else {
+                    result.push(Span::styled(" ", Style::default()
+                        .fg(self.theme.background)
+                        .bg(self.theme.cursor)
+                        .add_modifier(Modifier::BOLD)));
+                }
+                
+                if split_pos + 1 < chars.len() {
+                    let after_text: String = chars[split_pos + 1..].iter().collect();
+                    result.push(Span::styled(after_text, span.style));
+                }
+                
+                cursor_applied = true;
+            } else {
+                result.push(span);
+            }
+            
+            current_pos += span_len;
+        }
+
+        if !cursor_applied && current_pos <= cursor_pos {
+            result.push(Span::styled(" ", Style::default()
+                .fg(self.theme.background)
+                .bg(self.theme.cursor)
+                .add_modifier(Modifier::BOLD)));
+        }
+
+        result
     }
 
     
