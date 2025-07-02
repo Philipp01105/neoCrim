@@ -6,7 +6,7 @@ description = "Classic Monokai theme inspired by Sublime Text"
 background = { r = 39, g = 40, b = 34 }
 foreground = { r = 248, g = 248, b = 242 }
 cursor = { r = 253, g = 151, b = 31 }
-selection = { r = 73, g = 72, b = 62 }
+selection = { r = 117, g = 113, b = 94 }
 line_number = { r = 144, g = 144, b = 144 }
 current_line = { r = 60, g = 60, b = 54 }
 

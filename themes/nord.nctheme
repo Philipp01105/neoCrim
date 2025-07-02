@@ -6,7 +6,7 @@ description = "Arctic-inspired color palette with glass effects"
 background = { r = 46, g = 52, b = 64, a = 0.9 }
 foreground = { r = 236, g = 239, b = 244 }
 cursor = { r = 136, g = 192, b = 208 }
-selection = { r = 76, g = 86, b = 106, a = 0.5 }
+selection = { r = 129, g = 161, b = 193 }
 line_number = { r = 76, g = 86, b = 106 }
 current_line = { r = 59, g = 66, b = 82, a = 0.7 }
 

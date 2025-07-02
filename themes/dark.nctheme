@@ -6,7 +6,7 @@ description = "A sleek dark theme for NeoCrim"
 background = { r = 30, g = 30, b = 30 }
 foreground = { r = 212, g = 212, b = 212 }
 cursor = { r = 255, g = 255, b = 0 }
-selection = { r = 38, g = 79, b = 120 }
+selection = { r = 70, g = 130, b = 180 }
 line_number = { r = 133, g = 133, b = 133 }
 current_line = { r = 45, g = 45, b = 45 }
 

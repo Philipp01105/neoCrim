@@ -6,7 +6,7 @@ description = "Dark theme inspired by the popular Dracula color scheme"
 background = { r = 40, g = 42, b = 54 }
 foreground = { r = 248, g = 248, b = 242 }
 cursor = { r = 248, g = 248, b = 242 }
-selection = { r = 68, g = 71, b = 90 }
+selection = { r = 98, g = 114, b = 164 }
 line_number = { r = 98, g = 114, b = 164 }
 current_line = { r = 68, g = 71, b = 90 }
 

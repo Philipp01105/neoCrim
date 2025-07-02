@@ -6,7 +6,7 @@ description = "Clean light theme for bright environments"
 background = { r = 255, g = 255, b = 255 }
 foreground = { r = 51, g = 51, b = 51 }
 cursor = { r = 0, g = 0, b = 255 }
-selection = { r = 173, g = 214, b = 255 }
+selection = { r = 0, g = 120, b = 215 }
 line_number = { r = 133, g = 133, b = 133 }
 current_line = { r = 245, g = 245, b = 245 }
 

@@ -146,6 +146,7 @@ impl App {
 
     pub fn cut_selection(&mut self) {
         if self.selection.active {
+            self.save_undo_state();
             let selection_copy = self.selection.clone();
             let buffer = self.current_buffer_mut();
             let deleted_text = buffer.delete_selected_text(&selection_copy);
@@ -164,6 +165,8 @@ impl App {
         if !text.is_empty() {
             if self.selection.active {
                 self.cut_selection();
+            } else {
+                self.save_undo_state();
             }
             
             let cursor_copy = self.cursor;

@@ -7,12 +7,14 @@ use std::time::Duration;
 
 pub struct EventHandler {
     pub should_quit: bool,
+    paste_mode_remaining: usize,
 }
 
 impl EventHandler {
     pub fn new() -> Self {
         Self {
             should_quit: false,
+            paste_mode_remaining: 0,
         }
     }
 
@@ -34,6 +36,18 @@ impl EventHandler {
     }
 
     fn handle_key_event(&mut self, app: &mut App, key_event: KeyEvent) -> Result<()> {
+        log::debug!("Key event received: {:?} in mode: {:?}, paste_mode_remaining: {}", key_event, app.mode, self.paste_mode_remaining);
+        
+        if self.paste_mode_remaining > 0 {
+            if let KeyCode::Char(c) = key_event.code {
+                self.paste_mode_remaining -= 1;
+                log::debug!("*** PASTE MODE FILTER: Blocked character '{}' (code: {}) with modifiers: {:?}, remaining: {} ***", 
+                           c, c as u32, key_event.modifiers, self.paste_mode_remaining);
+                return Ok(());
+            } else {
+                log::debug!("Non-character event during paste mode: {:?}", key_event.code);
+            }
+        }
         if app.file_change_dialog.visible {
             match key_event.code {
                 KeyCode::Esc => {
@@ -189,8 +203,28 @@ impl EventHandler {
                     return Ok(());
                 }
                 KeyCode::Char('v') => {
-                    app.paste();
-                    app.set_status_message("Pasted from clipboard".to_string());
+                    let clipboard_text = crate::editor::Clipboard::get_text();
+                    if !clipboard_text.is_empty() {
+                       let char_count = clipboard_text.chars().count();
+                        self.paste_mode_remaining = char_count;
+                        log::debug!("Setting paste mode for {} characters: '{}'", char_count, clipboard_text);
+                        
+                        app.paste();
+                        app.set_status_message("Pasted from clipboard".to_string());
+                    }
+                    return Ok(());
+                }
+               KeyCode::Char(c) if c as u8 == 22 => {
+                    log::debug!("Ctrl+V (ASCII 22) pressed in normal mode");
+                    let clipboard_text = crate::editor::Clipboard::get_text();
+                    if !clipboard_text.is_empty() {
+                        let char_count = clipboard_text.chars().count();
+                        self.paste_mode_remaining = char_count;
+                        log::debug!("Setting paste mode for {} characters: '{}'", char_count, clipboard_text);
+                        
+                        app.paste();
+                        app.set_status_message("Pasted from clipboard".to_string());
+                    }
                     return Ok(());
                 }
                 KeyCode::Char('z') => {
@@ -488,9 +522,13 @@ impl EventHandler {
 
     fn handle_insert_mode(&mut self, app: &mut App, key_event: KeyEvent) -> Result<()> {
         let viewport_width = self.get_viewport_width(app).unwrap_or(80);
+        
+        log::debug!("Insert mode key event: {:?} (modifiers: {:?}, code: {:?})", key_event, key_event.modifiers, key_event.code);
 
         if key_event.modifiers.contains(KeyModifiers::CONTROL) {
+            log::debug!("CONTROL modifier detected in insert mode with key: {:?}", key_event.code);
             if key_event.modifiers.contains(KeyModifiers::SHIFT) {
+                log::debug!("CONTROL+SHIFT modifier detected in insert mode");
                 match key_event.code {
                     KeyCode::Left => {
                         if !app.selection.active {
@@ -516,14 +554,17 @@ impl EventHandler {
             
             match key_event.code {
                 KeyCode::Char('z') => {
+                    log::debug!("Ctrl+Z detected in insert mode");
                     app.undo();
                     return Ok(());
                 }
                 KeyCode::Char('y') => {
+                    log::debug!("Ctrl+Y detected in insert mode");
                     app.redo();
                     return Ok(());
                 }
                 KeyCode::Char('c') => {
+                    log::debug!("Ctrl+C detected in insert mode");
                     app.copy_selection();
                     if app.selection.active {
                         app.set_status_message("Copied selection".to_string());
@@ -531,6 +572,7 @@ impl EventHandler {
                     return Ok(());
                 }
                 KeyCode::Char('x') => {
+                    log::debug!("Ctrl+X detected in insert mode");
                     if app.selection.active {
                         app.cut_selection();
                         app.set_status_message("Cut selection".to_string());
@@ -538,8 +580,32 @@ impl EventHandler {
                     return Ok(());
                 }
                 KeyCode::Char('v') => {
-                    app.paste();
-                    app.set_status_message("Pasted from clipboard".to_string());
+                    log::debug!("*** Ctrl+V HANDLER TRIGGERED in insert mode ***");
+                    let clipboard_text = crate::editor::Clipboard::get_text();
+                    log::debug!("Clipboard content: '{}'", clipboard_text);
+                    if !clipboard_text.is_empty() {
+                       let char_count = clipboard_text.chars().count() + 5; 
+                        self.paste_mode_remaining = char_count;
+                        log::debug!("*** SETTING PASTE MODE for {} characters (with safety buffer): '{}' ***", char_count, clipboard_text);
+                        
+                        app.paste();
+                        app.set_status_message("Pasted from clipboard".to_string());
+                    } else {
+                        log::debug!("Clipboard is empty, not setting paste mode");
+                    }
+                    return Ok(());
+                }
+                KeyCode::Char(c) if c as u8 == 22 => {
+                    log::debug!("Ctrl+V (ASCII 22) pressed in insert mode");
+                    let clipboard_text = crate::editor::Clipboard::get_text();
+                    if !clipboard_text.is_empty() {
+                        let char_count = clipboard_text.chars().count();
+                        self.paste_mode_remaining = char_count;
+                        log::debug!("Setting paste mode for {} characters: '{}'", char_count, clipboard_text);
+                        
+                       app.paste();
+                        app.set_status_message("Pasted from clipboard".to_string());
+                    }
                     return Ok(());
                 }
                 KeyCode::Char('a') => {
@@ -628,9 +694,12 @@ impl EventHandler {
                     return Ok(());
                 }
                 KeyCode::Char(':') => {
-                    app.mode = Mode::Command;
-                    app.command_line.clear();
-                    return Ok(());
+                    log::debug!("Shift+: detected in insert mode");
+                    if app.config.editor.fast_command_line {
+                        app.mode = Mode::Command;
+                        app.command_line.clear();
+                        return Ok(());
+                    }
                 }
                 _ => {}
             }
@@ -703,7 +772,49 @@ impl EventHandler {
                 app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Char(c) => {
+                log::debug!("Character received in insert mode: '{}' (code: {}) with modifiers: {:?}", c, c as u32, key_event.modifiers);
+                
+               if c.is_control() {
+                    log::debug!("Rejecting control character: {:?} (code: {})", c, c as u32);
+                    return Ok(());
+                }
+                
+               match c as u8 {
+                    22 => { 
+                        log::debug!("Ctrl+V (ASCII 22) detected as char in insert mode");
+                        let clipboard_text = crate::editor::Clipboard::get_text();
+                        if !clipboard_text.is_empty() {
+                            let char_count = clipboard_text.chars().count();
+                            self.paste_mode_remaining = char_count;
+                            log::debug!("Setting paste mode for {} characters: '{}'", char_count, clipboard_text);
+                            
+                           app.paste();
+                            app.set_status_message("Pasted from clipboard".to_string());
+                        }
+                        return Ok(());
+                    }
+                    _ => {}
+                }
+                
+                match c {
+                    ':' if key_event.modifiers == KeyModifiers::NONE => {
+                        log::debug!("Rejecting ':' with no modifiers - likely escape sequence artifact");
+                        return Ok(());
+                    }
+                    '\\' if key_event.modifiers == KeyModifiers::NONE => {
+                        log::debug!("Rejecting '\\' with no modifiers - likely escape sequence artifact");
+                        return Ok(());
+                    }
+                    _ => {}
+                }
+                
+                log::debug!("Processing character: '{}' (code: {}) with modifiers: {:?}", c, c as u32, key_event.modifiers);
+                
                 if c == ':' && app.config.editor.fast_command_line {
+                    if key_event.modifiers == KeyModifiers::NONE {
+                        log::debug!("Rejecting ':' with no modifiers - likely escape sequence artifact");
+                        return Ok(());
+                    }
                     app.mode = Mode::Command;
                     return Ok(());
                 }
@@ -933,6 +1044,27 @@ impl EventHandler {
                 }
             }
             KeyCode::Char(c) => {
+               if c.is_control() {
+                    log::debug!("Rejecting control character in command mode: {:?} (code: {})", c, c as u32);
+                    return Ok(());
+                }
+                
+                if c as u8 == 22 {
+                    log::debug!("Ctrl+V (ASCII 22) detected in command mode, ignoring");
+                    return Ok(());
+                }
+                
+                if key_event.modifiers == KeyModifiers::NONE {
+                    match c {
+                        '\\' | 'p' => {
+                            log::debug!("Rejecting character '{}' with no modifiers in command mode - likely escape sequence artifact", c);
+                            return Ok(());
+                        }
+                        _ => {}
+                    }
+                }
+                
+                log::debug!("Adding character to command line: '{}' (code: {})", c, c as u32);
                 app.command_line.push(c);
                 app.clear_error_message();
             }

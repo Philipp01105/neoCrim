@@ -6,7 +6,7 @@ description = "Precision colors for machines and people with glass effects"
 background = { r = 0, g = 43, b = 54, a = 0.92 }
 foreground = { r = 131, g = 148, b = 150 }
 cursor = { r = 203, g = 75, b = 22 }
-selection = { r = 7, g = 54, b = 66, a = 0.6 }
+selection = { r = 38, g = 139, b = 210 }
 line_number = { r = 88, g = 110, b = 117 }
 current_line = { r = 7, g = 54, b = 66, a = 0.5 }
 

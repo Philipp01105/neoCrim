@@ -134,12 +134,8 @@ impl Renderer {
     fn render_editor(&self, frame: &mut Frame, app: &App, area: Rect) {
         let buffer = app.current_buffer();
         let cursor = &app.cursor;
-
-        log::info!("=== Starting render_editor ===");
-        log::info!("Area: {:?}, cursor: line={}, col={}", area, cursor.line, cursor.col);
-
+        
         if buffer.is_terminal() {
-            log::info!("Buffer is terminal, delegating to render_terminal");
             self.render_terminal(frame, app, area);
             return;
         }
@@ -148,14 +144,7 @@ impl Renderer {
         let content_width = area.width as usize - line_number_width;
         let viewport_height = area.height as usize;
         let scroll_offset = app.config.editor.scroll_offset;
-
-        log::info!("Editor config: line_numbers={}, relative_line_numbers={}, wrap_lines={}", 
-                   app.config.editor.line_numbers, 
-                   app.config.editor.relative_line_numbers, 
-                   app.config.editor.wrap_lines);
-        log::info!("Layout: line_number_width={}, content_width={}, viewport_height={}, scroll_offset={}", 
-                   line_number_width, content_width, viewport_height, scroll_offset);
-
+        
         let mut visual_lines = Vec::new();
         let mut current_visual_line = 0;
         let mut cursor_visual_line = 0;
@@ -163,14 +152,6 @@ impl Renderer {
         for line_idx in 0..buffer.line_count() {
             let line_content = buffer.line(line_idx).unwrap_or_default();
             let line_len = line_content.len();
-            
-            log::info!("Processing line {}: length={}, content_preview=\"{}\"", 
-                       line_idx, line_len, 
-                       if line_content.len() > 50 { 
-                           format!("{}...", &line_content[..50]) 
-                       } else { 
-                           line_content.clone() 
-                       });
             
             if !app.config.editor.wrap_lines || line_len <= content_width {
                 let displayed_content = if !app.config.editor.wrap_lines {
@@ -238,9 +219,7 @@ impl Renderer {
         let mut lines = Vec::new();
         for visual_idx in start_visual_line..end_visual_line {
             if let Some((line_idx, wrap_idx, content)) = visual_lines.get(visual_idx) {
-                log::info!("Rendering visual line {}: line_idx={}, wrap_idx={}, content=\"{}\"", 
-                           visual_idx, line_idx, wrap_idx, content);
-
+                
                 let line_number = if app.config.editor.relative_line_numbers {
                     if *wrap_idx == 0 {
                         if *line_idx == cursor.line {
@@ -296,21 +275,18 @@ impl Renderer {
                         for (mut highlight_style, text) in highlighted_spans {
                             if *line_idx == cursor.line {
                                 highlight_style = highlight_style.bg(self.theme.current_line);
-                                log::info!("    Applied cursor line background to span: \"{}\"", text);
-                            }
+                             }
                             processed_spans.push(Span::styled(text, highlight_style));
                         }
                         
                         let final_spans = self.apply_cursor_overlay(processed_spans, app, *line_idx, wrap_idx * content_width);
                         spans.extend(final_spans);
                     } else {
-                        log::info!("  No syntax highlighting available for this file");
-                        let final_spans = self.apply_cursor_overlay(content_with_highlights, app, *line_idx, wrap_idx * content_width);
+                         let final_spans = self.apply_cursor_overlay(content_with_highlights, app, *line_idx, wrap_idx * content_width);
                         spans.extend(final_spans);
                     }
                 } else {
-                    log::info!("  Syntax highlighting disabled");
-                    let simple_spans = vec![Span::raw(content)];
+                   let simple_spans = vec![Span::raw(content)];
                     let final_spans = self.apply_cursor_overlay(simple_spans, app, *line_idx, wrap_idx * content_width);
                     spans.extend(final_spans);
                 }
@@ -567,14 +543,27 @@ impl Renderer {
     }
     
     fn get_text_style(&self, line_idx: usize, is_selected: bool, is_search_match: bool, app: &App) -> Style {
-        let mut style = Style::default();
+        let mut style = Style::default().fg(self.theme.foreground);
         
         if line_idx == app.cursor.line {
             style = style.bg(self.theme.current_line);
         }
         
         if is_selected {
-            style = style.bg(self.theme.selection).fg(Color::White);
+           style = style.bg(self.theme.selection);
+            match self.theme.selection {
+                Color::Rgb(r, g, b) => {
+                    let luminance = (0.299 * r as f32 + 0.587 * g as f32 + 0.114 * b as f32) / 255.0;
+                    if luminance > 0.5 {
+                        style = style.fg(Color::Black);
+                    } else {
+                        style = style.fg(Color::White);
+                    }
+                }
+                _ => {
+                    style = style.fg(Color::White);
+                }
+            }
         }
         
         if is_search_match {
