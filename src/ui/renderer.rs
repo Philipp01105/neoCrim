@@ -2,7 +2,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Clear, Paragraph},
+    widgets::{Block, Borders, Paragraph},
     Frame,
 };
 use crate::app::App;
@@ -125,13 +125,21 @@ impl Renderer {
         if app.help_window.visible {
             self.render_help_window(frame, app, size);
         }
+
+        if app.file_change_dialog.visible {
+            self.render_file_change_dialog(frame, app, size);
+        }
     }
 
     fn render_editor(&self, frame: &mut Frame, app: &App, area: Rect) {
         let buffer = app.current_buffer();
         let cursor = &app.cursor;
 
+        log::info!("=== Starting render_editor ===");
+        log::info!("Area: {:?}, cursor: line={}, col={}", area, cursor.line, cursor.col);
+
         if buffer.is_terminal() {
+            log::info!("Buffer is terminal, delegating to render_terminal");
             self.render_terminal(frame, app, area);
             return;
         }
@@ -141,6 +149,13 @@ impl Renderer {
         let viewport_height = area.height as usize;
         let scroll_offset = app.config.editor.scroll_offset;
 
+        log::info!("Editor config: line_numbers={}, relative_line_numbers={}, wrap_lines={}", 
+                   app.config.editor.line_numbers, 
+                   app.config.editor.relative_line_numbers, 
+                   app.config.editor.wrap_lines);
+        log::info!("Layout: line_number_width={}, content_width={}, viewport_height={}, scroll_offset={}", 
+                   line_number_width, content_width, viewport_height, scroll_offset);
+
         let mut visual_lines = Vec::new();
         let mut current_visual_line = 0;
         let mut cursor_visual_line = 0;
@@ -149,28 +164,65 @@ impl Renderer {
             let line_content = buffer.line(line_idx).unwrap_or_default();
             let line_len = line_content.len();
             
+            log::info!("Processing line {}: length={}, content_preview=\"{}\"", 
+                       line_idx, line_len, 
+                       if line_content.len() > 50 { 
+                           format!("{}...", &line_content[..50]) 
+                       } else { 
+                           line_content.clone() 
+                       });
+            
             if !app.config.editor.wrap_lines || line_len <= content_width {
-                visual_lines.push((line_idx, 0, line_content.clone()));
+                let displayed_content = if !app.config.editor.wrap_lines {
+                    let h_offset = app.get_horizontal_scroll_offset();
+                    if h_offset < line_len {
+                        let end = (h_offset + content_width).min(line_len);
+                        let result = line_content[h_offset..end].to_string();
+                        log::info!("  Line {} no-wrap: h_offset={}, showing chars {}..{}, content=\"{}\"", 
+                                   line_idx, h_offset, h_offset, end, result);
+                        result
+                    } else {
+                        log::info!("  Line {} no-wrap: h_offset={} >= line_len={}, showing empty", 
+                                   line_idx, h_offset, line_len);
+                        String::new()
+                    }
+                } else {
+                    log::info!("  Line {} fits in viewport: showing full content", line_idx);
+                    line_content.clone()
+                };
+                
+                visual_lines.push((line_idx, 0, displayed_content));
                 if line_idx == cursor.line {
                     cursor_visual_line = current_visual_line;
+                    log::info!("  Line {} is cursor line, cursor_visual_line={}", line_idx, cursor_visual_line);
                 }
                 current_visual_line += 1;
             } else {
                 let wrapped_lines = (line_len + content_width - 1) / content_width;
+                log::info!("  Line {} wrapping: {} visual lines needed", line_idx, wrapped_lines);
+                
                 for wrap_idx in 0..wrapped_lines {
                     let start = wrap_idx * content_width;
                     let end = (start + content_width).min(line_len);
                     let segment = line_content[start..end].to_string();
                     
+                    log::info!("    Wrap {} of line {}: chars {}..{}, content=\"{}\"", 
+                               wrap_idx, line_idx, start, end, segment);
+                    
                     visual_lines.push((line_idx, wrap_idx, segment));
                     
                     if line_idx == cursor.line && cursor.col >= start && cursor.col < end {
                         cursor_visual_line = current_visual_line;
+                        log::info!("    Cursor found in wrap {} of line {}, cursor_visual_line={}", 
+                                   wrap_idx, line_idx, cursor_visual_line);
                     }
                     current_visual_line += 1;
                 }
             }
         }
+
+        log::info!("Visual lines created: total={}, cursor at visual line={}", 
+                   visual_lines.len(), cursor_visual_line);
 
         let start_visual_line = if cursor_visual_line >= scroll_offset {
             (cursor_visual_line - scroll_offset).min(visual_lines.len().saturating_sub(viewport_height))
@@ -180,35 +232,51 @@ impl Renderer {
 
         let end_visual_line = (start_visual_line + viewport_height).min(visual_lines.len());
 
+        log::info!("Viewport: showing visual lines {} to {} (total viewport_height={})", 
+                   start_visual_line, end_visual_line, viewport_height);
+
         let mut lines = Vec::new();
         for visual_idx in start_visual_line..end_visual_line {
             if let Some((line_idx, wrap_idx, content)) = visual_lines.get(visual_idx) {
+                log::info!("Rendering visual line {}: line_idx={}, wrap_idx={}, content=\"{}\"", 
+                           visual_idx, line_idx, wrap_idx, content);
+
                 let line_number = if app.config.editor.relative_line_numbers {
                     if *wrap_idx == 0 {
                         if *line_idx == cursor.line {
-                            if app.config.editor.line_numbers {
+                            let line_num = if app.config.editor.line_numbers {
                                 format!("{:4} ", line_idx + 1)
                             } else {
                                 format!("{:4} ", 0)
-                            }
+                            };
+                            log::info!("  Line number (cursor line): \"{}\"", line_num.trim());
+                            line_num
                         } else {
                             let relative_distance = if *line_idx > cursor.line {
                                 *line_idx - cursor.line
                             } else {
                                 cursor.line - *line_idx
                             };
-                            format!("{:4} ", relative_distance)
+                            let line_num = format!("{:4} ", relative_distance);
+                            log::info!("  Line number (relative): distance={}, display=\"{}\"", 
+                                       relative_distance, line_num.trim());
+                            line_num
                         }
                     } else {
+                        log::info!("  Line number (wrap continuation): empty");
                         "     ".to_string()
                     }
                 } else if app.config.editor.line_numbers {
                     if *wrap_idx == 0 {
-                        format!("{:4} ", line_idx + 1)
+                        let line_num = format!("{:4} ", line_idx + 1);
+                        log::info!("  Line number (absolute): {}", line_num.trim());
+                        line_num
                     } else {
+                        log::info!("  Line number (wrap continuation): empty");
                         "     ".to_string()
                     }
                 } else {
+                    log::info!("  Line numbers disabled");
                     String::new()
                 };
 
@@ -222,25 +290,37 @@ impl Renderer {
                 if app.config.editor.syntax_highlighting {
                     if let Some(syntax) = buffer.file_path()
                         .and_then(|path| app.syntax_highlighter.detect_language(Some(path))) {
+                        log::info!("  Applying syntax highlighting for language: {:?}", syntax);
                         let highlighted_spans = app.syntax_highlighter.highlight_line(content, syntax, &app.config.current_theme.colors);
 
+                        let mut processed_spans = Vec::new();
                         for (mut highlight_style, text) in highlighted_spans {
                             if *line_idx == cursor.line {
                                 highlight_style = highlight_style.bg(self.theme.current_line);
+                                log::info!("    Applied cursor line background to span: \"{}\"", text);
                             }
-                            
-                            spans.push(Span::styled(text, highlight_style));
+                            processed_spans.push(Span::styled(text, highlight_style));
                         }
+                        
+                        let final_spans = self.apply_cursor_overlay(processed_spans, app, *line_idx, wrap_idx * content_width);
+                        spans.extend(final_spans);
                     } else {
-                        spans.extend(content_with_highlights);
+                        log::info!("  No syntax highlighting available for this file");
+                        let final_spans = self.apply_cursor_overlay(content_with_highlights, app, *line_idx, wrap_idx * content_width);
+                        spans.extend(final_spans);
                     }
                 } else {
-                    spans.extend(content_with_highlights);
+                    log::info!("  Syntax highlighting disabled");
+                    let final_spans = self.apply_cursor_overlay(content_with_highlights, app, *line_idx, wrap_idx * content_width);
+                    spans.extend(final_spans);
                 }
 
+                log::info!("  Final spans count: {}", spans.len());
                 lines.push(Line::from(spans));
             }
         }
+
+        log::info!("Total rendered lines: {}", lines.len());
 
         let background_style = self.get_background_style(app);
         let paragraph = Paragraph::new(lines)
@@ -248,47 +328,78 @@ impl Renderer {
             .block(Block::default().borders(Borders::NONE));
 
         frame.render_widget(paragraph, area);
-
-        self.render_cursor_visual(frame, app, area, start_visual_line, &visual_lines);
     }
 
-    fn render_cursor_visual(&self, frame: &mut Frame, app: &App, area: Rect, start_visual_line: usize, visual_lines: &[(usize, usize, String)]) {
-        let cursor = &app.cursor;
-        let line_number_width = if app.config.editor.line_numbers || app.config.editor.relative_line_numbers { 5 } else { 0 };
-        let content_width = area.width as usize - line_number_width;
-
-        for (visual_idx, (line_idx, wrap_idx, _content)) in visual_lines.iter().enumerate() {
-            if *line_idx == cursor.line {
-                let start_col = wrap_idx * content_width;
-                let end_col = start_col + content_width;
-                
-                if cursor.col >= start_col && cursor.col < end_col {
-                    let visual_line_idx = visual_idx;
-                    
-                    if visual_line_idx >= start_visual_line && visual_line_idx < start_visual_line + area.height as usize {
-                        let cursor_y = area.y + (visual_line_idx - start_visual_line) as u16;
-                        let cursor_x = area.x + line_number_width as u16 + (cursor.col - start_col) as u16;
-
-                        if cursor_x < area.x + area.width && cursor_y < area.y + area.height && app.should_show_cursor() {
-                            let cursor_area = Rect {
-                                x: cursor_x,
-                                y: cursor_y,
-                                width: 1,
-                                height: 1,
-                            };
-
-                            let cursor_char = if app.mode.is_insert() { "|" } else { "█" };
-                            let cursor_widget = Paragraph::new(cursor_char)
-                                .style(Style::default().fg(self.theme.cursor).add_modifier(Modifier::BOLD));
-
-                            frame.render_widget(Clear, cursor_area);
-                            frame.render_widget(cursor_widget, cursor_area);
-                        }
-                    }
-                    break;
-                }
-            }
+    fn apply_cursor_overlay<'a>(&self, spans: Vec<Span<'a>>, app: &App, line_idx: usize, line_start_col: usize) -> Vec<Span<'a>> {
+        if line_idx != app.cursor.line || !app.should_show_cursor() {
+            return spans;
         }
+
+        let h_offset = app.get_horizontal_scroll_offset();
+        let cursor_col = app.cursor.col;
+        
+        let cursor_pos_in_segment = if cursor_col >= h_offset + line_start_col {
+            cursor_col - h_offset - line_start_col
+        } else {
+            return spans;
+        };
+        
+        self.apply_normal_cursor(spans, cursor_pos_in_segment)
+    }
+
+
+    fn apply_normal_cursor<'a>(&self, spans: Vec<Span<'a>>, cursor_pos: usize) -> Vec<Span<'a>> {
+        let mut result = Vec::new();
+        let mut current_pos = 0;
+        let mut cursor_applied = false;
+
+        for span in spans {
+            let span_text = span.content.as_ref();
+            let span_len = span_text.chars().count();
+            
+            if current_pos <= cursor_pos && cursor_pos < current_pos + span_len {
+                let chars: Vec<char> = span_text.chars().collect();
+                let split_pos = cursor_pos - current_pos;
+                
+                if split_pos > 0 {
+                    let before_text: String = chars[0..split_pos].iter().collect();
+                    result.push(Span::styled(before_text, span.style));
+                }
+                
+                if split_pos < chars.len() {
+                    let cursor_char = chars[split_pos].to_string();
+                    result.push(Span::styled(cursor_char, Style::default()
+                        .fg(self.theme.background)
+                        .bg(self.theme.cursor)
+                        .add_modifier(Modifier::BOLD)));
+                } else {
+                    result.push(Span::styled(" ", Style::default()
+                        .fg(self.theme.background)
+                        .bg(self.theme.cursor)
+                        .add_modifier(Modifier::BOLD)));
+                }
+                
+                if split_pos + 1 < chars.len() {
+                    let after_text: String = chars[split_pos + 1..].iter().collect();
+                    result.push(Span::styled(after_text, span.style));
+                }
+                
+                cursor_applied = true;
+            } else {
+                result.push(span);
+            }
+            
+            current_pos += span_len;
+        }
+
+        if !cursor_applied && current_pos <= cursor_pos {
+            result.push(Span::styled(" ", Style::default()
+                .fg(self.theme.background)
+                .bg(self.theme.cursor)
+                .add_modifier(Modifier::BOLD)));
+        }
+
+        result
     }
 
     
@@ -547,6 +658,79 @@ impl Renderer {
             
             frame.render_widget(info_paragraph, info_area);
         }
+    }
+
+    fn render_file_change_dialog(&self, frame: &mut Frame, app: &App, area: Rect) {
+        let window_width = 60;
+        let window_height = 8;
+        
+        let x = (area.width.saturating_sub(window_width)) / 2;
+        let y = (area.height.saturating_sub(window_height)) / 2;
+        
+        let dialog_area = Rect {
+            x: area.x + x,
+            y: area.y + y,
+            width: window_width,
+            height: window_height,
+        };
+
+        let clear_widget = ratatui::widgets::Clear;
+        frame.render_widget(clear_widget, dialog_area);
+
+        let file_name = app.file_change_dialog.changed_file
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("unknown");
+
+        let content = vec![
+            Line::from(""),
+            Line::from(format!(" File has been modified: {}", file_name)),
+            Line::from(""),
+            Line::from(" Choose action:"),
+            Line::from(""),
+        ];
+
+        let selected = app.file_change_dialog.selected_option;
+        
+        let option1_style = if selected == 0 {
+            Style::default().fg(Color::Black).bg(Color::Yellow)
+        } else {
+            Style::default().fg(self.theme.foreground)
+        };
+        
+        let option2_style = if selected == 1 {
+            Style::default().fg(Color::Black).bg(Color::Yellow)
+        } else {
+            Style::default().fg(self.theme.foreground)
+        };
+
+        let dialog_paragraph = Paragraph::new(content)
+            .style(Style::default().fg(self.theme.foreground).bg(self.theme.background))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(" File Changed ")
+                    .title_style(Style::default().fg(Color::Red).add_modifier(Modifier::BOLD))
+                    .border_style(Style::default().fg(Color::Red))
+            );
+
+        frame.render_widget(dialog_paragraph, dialog_area);
+
+        let buttons_area = Rect {
+            x: dialog_area.x + 2,
+            y: dialog_area.y + 5,
+            width: dialog_area.width.saturating_sub(4),
+            height: 1,
+        };
+
+        let button1 = Span::styled(" [R]eload from disk ", option1_style);
+        let spacer = Span::raw("  ");
+        let button2 = Span::styled(" [K]eep current ", option2_style);
+        
+        let buttons_line = Line::from(vec![button1, spacer, button2]);
+        let buttons_paragraph = Paragraph::new(vec![buttons_line]);
+        
+        frame.render_widget(buttons_paragraph, buttons_area);
     }
 
     fn get_background_style(&self, app: &App) -> Color {

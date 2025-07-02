@@ -3,6 +3,11 @@ use neocrim::{App, Result};
 use neocrim::input::EventHandler;
 use neocrim::ui::{setup_terminal, restore_terminal, Renderer};
 use std::path::PathBuf;
+use log4rs::append::file::FileAppender;
+use log4rs::Config;
+use log4rs::config::{Appender, Root};
+use log4rs::encode::pattern::PatternEncoder;
+use log::LevelFilter;
 
 fn main() -> Result<()> {
     let matches = Command::new("neocrim")
@@ -26,6 +31,20 @@ fn main() -> Result<()> {
         )
         .get_matches();
 
+    let logfile = FileAppender::builder()
+        .encoder(Box::new(PatternEncoder::new("{l} - {m}\n")))
+        .build("D:\\programmiern\\neocrim\\log.log")?;
+
+    let config = Config::builder()
+        .appender(Appender::builder().build("logfile", Box::new(logfile)))
+        .build(Root::builder()
+            .appender("logfile")
+            .build(LevelFilter::Off))?;
+
+    log4rs::init_config(config).expect("TODO: panic message");
+    
+    log::info!("Starting neocrim...");
+
     let mut app = App::new()?;
     let mut event_handler = EventHandler::new();
 
@@ -42,6 +61,7 @@ fn main() -> Result<()> {
 
     loop {
         app.update_cursor_blink();
+        app.check_file_changes();
         renderer.update_theme_with_effects(app.config.theme.clone(), &app.config.current_theme);
         
         let (width, _) = crossterm::terminal::size()?;

@@ -213,7 +213,8 @@ impl Buffer {
 
     pub fn line(&self, line_idx: usize) -> Option<String> {
         if line_idx < self.content.len_lines() {
-            Some(self.content.line(line_idx).to_string())
+            let line_content = self.content.line(line_idx).to_string();
+            Some(crate::utils::text::TextUtils::trim_line_end(&line_content).to_string())
         } else {
             None
         }
@@ -244,6 +245,25 @@ impl Buffer {
                 .and_then(|name| name.to_str())
                 .map(|s| s.to_string()),
         }
+    }
+
+    pub fn reload_from_disk(&mut self) -> Result<()> {
+        if let Some(ref path) = self.file_path {
+            if path.exists() {
+                let content_str = std::fs::read_to_string(path)
+                    .with_context(|| format!("Failed to read file: {}", path.display()))?;
+                
+                self.content = Rope::from_str(&content_str);
+                self.is_modified = false;
+                
+                log::info!("Reloaded file from disk: {}", path.display());
+            } else {
+                return Err(anyhow::anyhow!("File no longer exists: {}", path.display()));
+            }
+        } else {
+            return Err(anyhow::anyhow!("Cannot reload buffer without file path"));
+        }
+        Ok(())
     }
 
     pub fn is_terminal(&self) -> bool {
@@ -298,7 +318,7 @@ impl Buffer {
         }
         
         let line_start = self.content.line_to_char(line);
-        let line_len = self.content.line(line).len_chars();
+        let line_len = self.line_len(line);
         
         if col <= line_len {
             Some(line_start + col)
@@ -307,9 +327,7 @@ impl Buffer {
         }
     }
 
-    // Undo/Redo functionality
     pub fn save_state(&mut self, cursor: &Cursor) {
-        // Limit undo stack size to prevent memory issues
         const MAX_UNDO_STATES: usize = 100;
 
         let undo_state = UndoState {
@@ -319,25 +337,21 @@ impl Buffer {
         
         self.undo_stack.push_back(undo_state);
 
-        // Remove oldest states if we exceed the limit
         if self.undo_stack.len() > MAX_UNDO_STATES {
             self.undo_stack.pop_front();
         }
         
-        // Clear redo stack when a new action is performed
         self.redo_stack.clear();
     }
 
     pub fn undo(&mut self) -> Option<Cursor> {
         if let Some(undo_state) = self.undo_stack.pop_back() {
-            // Save current state to redo stack
             let current_state = UndoState {
                 content: self.content.clone(),
-                cursor: undo_state.cursor.clone(), // Use the cursor from undo state
+                cursor: undo_state.cursor.clone(), 
             };
             self.redo_stack.push_back(current_state);
             
-            // Restore previous state
             self.content = undo_state.content;
             self.is_modified = true;
 
@@ -349,14 +363,12 @@ impl Buffer {
 
     pub fn redo(&mut self) -> Option<Cursor> {
         if let Some(redo_state) = self.redo_stack.pop_back() {
-            // Save current state to undo stack
             let current_state = UndoState {
                 content: self.content.clone(),
-                cursor: redo_state.cursor.clone(), // Use the cursor from redo state
+                cursor: redo_state.cursor.clone(), 
             };
             self.undo_stack.push_back(current_state);
             
-            // Restore redo state
             self.content = redo_state.content;
             self.is_modified = true;
 
