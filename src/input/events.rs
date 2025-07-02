@@ -634,13 +634,6 @@ impl EventHandler {
                 }
                 _ => {}
             }
-
-            if key_event.modifiers.contains(KeyModifiers::CONTROL) {
-                if key_event.code == KeyCode::Char('.') {
-                    // TODO: make it so ctrl + . shows : as normal shift + . switches to command mode
-                    // should be a settable setting :set fastcm =true/false
-                }
-            }
         } else {
             if app.selection.active {
                 match key_event.code {
@@ -669,11 +662,13 @@ impl EventHandler {
             KeyCode::Left => {
                 let buffer = app.current_buffer().clone();
                 app.cursor.move_left_insert_mode(&buffer);
+                app.reset_cursor_blink();
                 app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Right => {
                 let buffer = app.current_buffer().clone();
                 app.cursor.move_right_insert_mode(&buffer);
+                app.reset_cursor_blink();
                 app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Up => {
@@ -683,6 +678,7 @@ impl EventHandler {
                 } else {
                     app.cursor.move_up_insert_mode(&buffer);
                 }
+                app.reset_cursor_blink();
                 app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Down => {
@@ -692,15 +688,18 @@ impl EventHandler {
                 } else {
                     app.cursor.move_down_insert_mode(&buffer);
                 }
+                app.reset_cursor_blink();
                 app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Home => {
                 app.cursor.move_line_start();
+                app.reset_cursor_blink();
                 app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::End => {
                 let buffer = app.current_buffer().clone();
                 app.cursor.move_line_end(&buffer);
+                app.reset_cursor_blink();
                 app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Char(c) => {
@@ -719,6 +718,7 @@ impl EventHandler {
                 
                 app.cursor.col += 1;
                 app.cursor.desired_col = app.cursor.col;
+                app.reset_cursor_blink();
                 
                 app.update_horizontal_scroll(viewport_width);
             }
@@ -734,10 +734,12 @@ impl EventHandler {
                 let buffer = app.current_buffer().clone();
                 app.cursor.move_down(&buffer);
                 app.cursor.move_line_start();
+                app.reset_cursor_blink();
                 app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Backspace => {
                 if app.delete_selection() {
+                    app.reset_cursor_blink();
                     app.update_horizontal_scroll(viewport_width);
                     return Ok(());
                 }
@@ -751,6 +753,7 @@ impl EventHandler {
                     let cursor_col = app.cursor.col;
                     let buffer = app.current_buffer_mut();
                     buffer.delete_char(cursor_line, cursor_col);
+                    app.reset_cursor_blink();
                     app.update_horizontal_scroll(viewport_width);
                 } else if app.cursor.line > 0 {
                     let prev_line_idx = app.cursor.line - 1;
@@ -765,11 +768,13 @@ impl EventHandler {
                     let cursor_col = app.cursor.col;
                     let buffer = app.current_buffer_mut();
                     buffer.delete_char(cursor_line, cursor_col);
+                    app.reset_cursor_blink();
                     app.update_horizontal_scroll(viewport_width);
                 }
             }
             KeyCode::Delete => {
                 if app.delete_selection() {
+                    app.reset_cursor_blink();
                     app.update_horizontal_scroll(viewport_width);
                     return Ok(());
                 }
@@ -779,6 +784,7 @@ impl EventHandler {
                 let cursor_col = app.cursor.col;
                 let buffer = app.current_buffer_mut();
                 buffer.delete_char(cursor_line, cursor_col);
+                app.reset_cursor_blink();
                 app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Tab => {
@@ -795,6 +801,7 @@ impl EventHandler {
 
                 app.cursor.col += tab_size;
                 app.cursor.desired_col = app.cursor.col;
+                app.reset_cursor_blink();
                 app.update_horizontal_scroll(viewport_width);
             }
             _ => {}

@@ -68,6 +68,7 @@ pub enum Command {
     SetCursorBlink(bool),
     SetShowStatusLine(bool),
     SetShowCommandLine(bool),
+    SetFastcmd(bool),
     
     // Get commands to show current settings
     ShowSettings,

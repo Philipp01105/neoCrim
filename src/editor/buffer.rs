@@ -116,8 +116,17 @@ impl Buffer {
 
     pub fn insert_char(&mut self, line: usize, col: usize, ch: char) {
         if let Some(char_idx) = self.line_col_to_char_idx(line, col) {
+            log::debug!("insert_char: line={}, col={}, ch='{}' (U+{:04X}), char_idx={}", 
+                       line, col, ch.escape_debug(), ch as u32, char_idx);
             self.content.insert_char(char_idx, ch);
             self.is_modified = true;
+            
+            if let Some(line_content) = self.line(line) {
+                log::debug!("  line after insert: '{}'", line_content.escape_debug());
+            }
+        } else {
+            log::debug!("insert_char: FAILED line={}, col={}, ch='{}' - char_idx is None", 
+                       line, col, ch.escape_debug());
         }
     }
 
@@ -214,7 +223,19 @@ impl Buffer {
     pub fn line(&self, line_idx: usize) -> Option<String> {
         if line_idx < self.content.len_lines() {
             let line_content = self.content.line(line_idx).to_string();
-            Some(crate::utils::text::TextUtils::trim_line_end(&line_content).to_string())
+            
+            let trimmed = if line_content.ends_with('\n') {
+                &line_content[..line_content.len() - 1]
+            } else {
+                &line_content
+            };
+            
+            let is_last_line = line_idx == self.content.len_lines() - 1;
+            
+            log::debug!("line({}): raw='{}', trimmed='{}', is_last_line={}", 
+                       line_idx, line_content.escape_debug(), trimmed.escape_debug(), is_last_line);
+            
+            Some(trimmed.to_string())
         } else {
             None
         }
@@ -222,11 +243,27 @@ impl Buffer {
 
     pub fn line_len(&self, line_idx: usize) -> usize {
         if line_idx < self.content.len_lines() {
-            self.content.line(line_idx).len_chars().saturating_sub(1) 
+            let line_slice = self.content.line(line_idx);
+            let raw_len = line_slice.len_chars();
+            let line_str = line_slice.to_string();
+            let is_last_line = line_idx == self.content.len_lines() - 1;
+            
+            let has_newline = line_str.ends_with('\n');
+            let calculated_len = if has_newline {
+                raw_len.saturating_sub(1)
+            } else {
+                raw_len
+            };
+            
+            log::debug!("line_len({}): raw_len={}, has_newline={}, calculated_len={}, is_last_line={}", 
+                       line_idx, raw_len, has_newline, calculated_len, is_last_line);
+            
+            calculated_len
         } else {
             0
         }
     }
+
 
     pub fn is_empty(&self) -> bool {
         self.content.len_chars() == 0
@@ -319,10 +356,17 @@ impl Buffer {
         
         let line_start = self.content.line_to_char(line);
         let line_len = self.line_len(line);
+        let is_last_line = line == self.content.len_lines() - 1;
+        
+        log::debug!("line_col_to_char_idx: line={}, col={}, line_start={}, line_len={}, is_last_line={}", 
+                   line, col, line_start, line_len, is_last_line);
         
         if col <= line_len {
-            Some(line_start + col)
+            let result = line_start + col;
+            log::debug!("  -> char_idx={}", result);
+            Some(result)
         } else {
+            log::debug!("  -> None (col {} > line_len {})", col, line_len);
             None
         }
     }

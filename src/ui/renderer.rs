@@ -178,7 +178,7 @@ impl Renderer {
                     if h_offset < line_len {
                         let end = (h_offset + content_width).min(line_len);
                         let result = line_content[h_offset..end].to_string();
-                        log::info!("  Line {} no-wrap: h_offset={}, showing chars {}..{}, content=\"{}\"", 
+                        log::debug!("  Line {} no-wrap: h_offset={}, showing chars {}..{}, content=\"{}\"", 
                                    line_idx, h_offset, h_offset, end, result);
                         result
                     } else {
@@ -287,7 +287,7 @@ impl Renderer {
 
                 let content_with_highlights = self.apply_highlighting(content, *line_idx, app);
                 
-                if app.config.editor.syntax_highlighting {
+                if false && app.config.editor.syntax_highlighting {
                     if let Some(syntax) = buffer.file_path()
                         .and_then(|path| app.syntax_highlighter.detect_language(Some(path))) {
                         let highlighted_spans = app.syntax_highlighter.highlight_line(content, syntax, &app.config.current_theme.colors);
@@ -310,7 +310,8 @@ impl Renderer {
                     }
                 } else {
                     log::info!("  Syntax highlighting disabled");
-                    let final_spans = self.apply_cursor_overlay(content_with_highlights, app, *line_idx, wrap_idx * content_width);
+                    let simple_spans = vec![Span::raw(content)];
+                    let final_spans = self.apply_cursor_overlay(simple_spans, app, *line_idx, wrap_idx * content_width);
                     spans.extend(final_spans);
                 }
 

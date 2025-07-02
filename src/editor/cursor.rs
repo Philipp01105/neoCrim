@@ -248,8 +248,8 @@ impl Cursor {
         }
 
         let line_len = buffer.line_len(self.line);
-        if self.col > line_len + 1 {
-            self.col = line_len + 1;
+        if self.col > line_len {
+            self.col = line_len;
         }
 
         self.desired_col = self.col;
@@ -257,7 +257,8 @@ impl Cursor {
 
     pub fn move_right_insert_mode(&mut self, buffer: &Buffer) {
         let line_len = buffer.line_len(self.line);
-        if self.col < line_len + 1 {
+        log::debug!("cursor position: {} {}, line len: {}", self.line, self.col, line_len);
+        if self.col < line_len {
             self.col += 1;
             self.desired_col = self.col;
         } else if self.line + 1 < buffer.line_count() {
@@ -273,7 +274,7 @@ impl Cursor {
             self.desired_col = self.col;
         } else if self.line > 0 {
             self.line -= 1;
-            self.col = buffer.line_len(self.line) + 1;
+            self.col = buffer.line_len(self.line);
             self.desired_col = self.col;
         }
     }
@@ -282,8 +283,8 @@ impl Cursor {
         if self.line > 0 {
             self.line -= 1;
             let line_len = buffer.line_len(self.line);
-            if self.col > line_len + 1 {
-                self.col = line_len + 1;
+            if self.col > line_len {
+                self.col = line_len;
             }
             self.desired_col = self.col;
         }
@@ -293,8 +294,8 @@ impl Cursor {
         if self.line + 1 < buffer.line_count() {
             self.line += 1;
             let line_len = buffer.line_len(self.line);
-            if self.col > line_len + 1 {
-                self.col = line_len + 1;
+            if self.col > line_len {
+                self.col = line_len;
             }
             self.desired_col = self.col;
         }

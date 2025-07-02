@@ -265,6 +265,11 @@ impl App {
         }
     }
 
+    pub fn reset_cursor_blink(&mut self) {
+        self.cursor_blink_state = true;
+        self.last_cursor_blink = Instant::now();
+    }
+
     pub fn set_status_message(&mut self, message: String) {
         self.status_message = Some(message);
     }
