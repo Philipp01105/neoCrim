@@ -290,7 +290,6 @@ impl Renderer {
                 if app.config.editor.syntax_highlighting {
                     if let Some(syntax) = buffer.file_path()
                         .and_then(|path| app.syntax_highlighter.detect_language(Some(path))) {
-                        log::info!("  Applying syntax highlighting for language: {:?}", syntax);
                         let highlighted_spans = app.syntax_highlighter.highlight_line(content, syntax, &app.config.current_theme.colors);
 
                         let mut processed_spans = Vec::new();
