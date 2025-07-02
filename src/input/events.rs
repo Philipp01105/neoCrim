@@ -627,7 +627,19 @@ impl EventHandler {
                     app.update_horizontal_scroll(viewport_width);
                     return Ok(());
                 }
+                KeyCode::Char(':') => {
+                    app.mode = Mode::Command;
+                    app.command_line.clear();
+                    return Ok(());
+                }
                 _ => {}
+            }
+
+            if key_event.modifiers.contains(KeyModifiers::CONTROL) {
+                if key_event.code == KeyCode::Char('.') {
+                    // TODO: make it so ctrl + . shows : as normal shift + . switches to command mode
+                    // should be a settable setting :set fastcm =true/false
+                }
             }
         } else {
             if app.selection.active {
