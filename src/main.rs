@@ -39,7 +39,11 @@ fn main() -> Result<()> {
         .appender(Appender::builder().build("logfile", Box::new(logfile)))
         .build(Root::builder()
             .appender("logfile")
-            .build(LevelFilter::Debug))?;
+            .build(if cfg!(debug_assertions){
+                LevelFilter::Debug
+            }else{
+                LevelFilter::Off
+            }))?;
 
     log4rs::init_config(config).expect("TODO: panic message");
     
