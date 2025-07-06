@@ -2,8 +2,8 @@ use ratatui::{
     prelude::*,
     widgets::{Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap},
 };
-use std::process::{Command, Stdio};
 use std::io::{BufRead, BufReader};
+use std::process::{Command, Stdio};
 
 #[derive(Debug, Clone)]
 pub struct TerminalOutput {
@@ -98,8 +98,10 @@ impl TerminalOutput {
                 match child.wait() {
                     Ok(status) => {
                         if !status.success() {
-                            self.add_line(format!("Command exited with code: {}", 
-                                status.code().unwrap_or(-1)));
+                            self.add_line(format!(
+                                "Command exited with code: {}",
+                                status.code().unwrap_or(-1)
+                            ));
                         }
                     }
                     Err(e) => {
@@ -144,7 +146,8 @@ impl TerminalOutput {
             match self.history_index {
                 None => {
                     self.history_index = Some(self.command_history.len() - 1);
-                    self.current_input = self.command_history[self.command_history.len() - 1].clone();
+                    self.current_input =
+                        self.command_history[self.command_history.len() - 1].clone();
                 }
                 Some(index) if index > 0 => {
                     self.history_index = Some(index - 1);
@@ -221,11 +224,15 @@ impl Terminal {
             if self.output.scroll_offset == 0 {
                 total_lines.saturating_sub(viewport_height)
             } else {
-                self.output.scroll_offset.min(total_lines.saturating_sub(viewport_height))
+                self.output
+                    .scroll_offset
+                    .min(total_lines.saturating_sub(viewport_height))
             }
         };
 
-        let visible_lines: Vec<Line> = self.output.lines
+        let visible_lines: Vec<Line> = self
+            .output
+            .lines
             .iter()
             .skip(scroll_offset)
             .take(viewport_height)
@@ -255,8 +262,7 @@ impl Terminal {
                 height: area.height - 2,
             };
 
-            let mut scrollbar_state = ScrollbarState::new(total_lines)
-                .position(scroll_offset);
+            let mut scrollbar_state = ScrollbarState::new(total_lines).position(scroll_offset);
 
             let scrollbar = Scrollbar::default()
                 .orientation(ScrollbarOrientation::VerticalRight)
@@ -272,8 +278,7 @@ impl Terminal {
                 width: 12,
                 height: 1,
             };
-            let status = Paragraph::new("[Running...]")
-                .style(theme.terminal_running);
+            let status = Paragraph::new("[Running...]").style(theme.terminal_running);
             status.render(status_area, buf);
         }
     }

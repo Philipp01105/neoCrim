@@ -1,8 +1,8 @@
-use serde::{Deserialize, Serialize};
-use ratatui::style::Color;
-use std::path::Path;
 use crate::Result;
 use anyhow::Context;
+use ratatui::style::Color;
+use serde::{Deserialize, Serialize};
+use std::path::Path;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NeoTheme {
@@ -21,7 +21,7 @@ pub struct ThemeColors {
     pub selection: ColorValue,
     pub line_number: ColorValue,
     pub current_line: ColorValue,
-    
+
     // Glass/Transparency effects
     #[serde(default = "default_opacity")]
     pub background_opacity: f32,
@@ -29,20 +29,20 @@ pub struct ThemeColors {
     pub blur_radius: f32,
     #[serde(default = "default_false")]
     pub enable_glass: bool,
-    
+
     // Status bar colors
     pub status_bg: ColorValue,
     pub status_fg: ColorValue,
     pub command_bg: ColorValue,
     pub command_fg: ColorValue,
-    
+
     // File explorer colors
     pub explorer_bg: ColorValue,
     pub explorer_fg: ColorValue,
     pub explorer_selected: ColorValue,
     pub explorer_directory: ColorValue,
     pub explorer_file: ColorValue,
-    
+
     // Border and accent colors
     #[serde(default = "default_accent")]
     pub accent_color: ColorValue,
@@ -54,7 +54,7 @@ pub struct ThemeColors {
     pub highlight: ColorValue,
     #[serde(default = "default_shadow")]
     pub shadow: ColorValue,
-    
+
     // Syntax highlighting colors
     pub syntax_keyword: ColorValue,
     pub syntax_string: ColorValue,
@@ -66,8 +66,8 @@ pub struct ThemeColors {
     pub syntax_number: ColorValue,
     pub syntax_operator: ColorValue,
     pub syntax_punctuation: ColorValue,
-    
-    // Additional syntax colors 
+
+    // Additional syntax colors
     #[serde(default = "default_syntax_attribute")]
     pub syntax_attribute: ColorValue,
     #[serde(default = "default_syntax_special")]
@@ -95,22 +95,102 @@ pub enum ColorValue {
     Named(String),
 }
 
-fn default_opacity() -> f32 { 1.0 }
-fn default_blur() -> f32 { 0.0 }
-fn default_false() -> bool { false }
-fn default_accent() -> ColorValue { ColorValue::Rgb { r: 0, g: 120, b: 215 } }
-fn default_border() -> ColorValue { ColorValue::Rgb { r: 100, g: 100, b: 100 } }
-fn default_inactive_border() -> ColorValue { ColorValue::Rgb { r: 60, g: 60, b: 60 } }
-fn default_highlight() -> ColorValue { ColorValue::Rgb { r: 255, g: 255, b: 255 } }
-fn default_shadow() -> ColorValue { ColorValue::Rgb { r: 0, g: 0, b: 0 } }
-fn default_syntax_attribute() -> ColorValue { ColorValue::Rgb { r: 156, g: 220, b: 254 } }
-fn default_syntax_special() -> ColorValue { ColorValue::Rgb { r: 255, g: 215, b: 0 } }
-fn default_syntax_tag() -> ColorValue { ColorValue::Rgb { r: 86, g: 156, b: 214 } }
-fn default_syntax_link() -> ColorValue { ColorValue::Rgb { r: 86, g: 156, b: 214 } }
-fn default_error() -> ColorValue { ColorValue::Rgb { r: 244, g: 67, b: 54 } }
-fn default_warning() -> ColorValue { ColorValue::Rgb { r: 255, g: 152, b: 0 } }
-fn default_info() -> ColorValue { ColorValue::Rgb { r: 33, g: 150, b: 243 } }
-fn default_success() -> ColorValue { ColorValue::Rgb { r: 76, g: 175, b: 80 } }
+fn default_opacity() -> f32 {
+    1.0
+}
+fn default_blur() -> f32 {
+    0.0
+}
+fn default_false() -> bool {
+    false
+}
+fn default_accent() -> ColorValue {
+    ColorValue::Rgb {
+        r: 0,
+        g: 120,
+        b: 215,
+    }
+}
+fn default_border() -> ColorValue {
+    ColorValue::Rgb {
+        r: 100,
+        g: 100,
+        b: 100,
+    }
+}
+fn default_inactive_border() -> ColorValue {
+    ColorValue::Rgb {
+        r: 60,
+        g: 60,
+        b: 60,
+    }
+}
+fn default_highlight() -> ColorValue {
+    ColorValue::Rgb {
+        r: 255,
+        g: 255,
+        b: 255,
+    }
+}
+fn default_shadow() -> ColorValue {
+    ColorValue::Rgb { r: 0, g: 0, b: 0 }
+}
+fn default_syntax_attribute() -> ColorValue {
+    ColorValue::Rgb {
+        r: 156,
+        g: 220,
+        b: 254,
+    }
+}
+fn default_syntax_special() -> ColorValue {
+    ColorValue::Rgb {
+        r: 255,
+        g: 215,
+        b: 0,
+    }
+}
+fn default_syntax_tag() -> ColorValue {
+    ColorValue::Rgb {
+        r: 86,
+        g: 156,
+        b: 214,
+    }
+}
+fn default_syntax_link() -> ColorValue {
+    ColorValue::Rgb {
+        r: 86,
+        g: 156,
+        b: 214,
+    }
+}
+fn default_error() -> ColorValue {
+    ColorValue::Rgb {
+        r: 244,
+        g: 67,
+        b: 54,
+    }
+}
+fn default_warning() -> ColorValue {
+    ColorValue::Rgb {
+        r: 255,
+        g: 152,
+        b: 0,
+    }
+}
+fn default_info() -> ColorValue {
+    ColorValue::Rgb {
+        r: 33,
+        g: 150,
+        b: 243,
+    }
+}
+fn default_success() -> ColorValue {
+    ColorValue::Rgb {
+        r: 76,
+        g: 175,
+        b: 80,
+    }
+}
 
 impl ColorValue {
     pub fn to_ratatui_color(&self) -> Color {
@@ -121,7 +201,7 @@ impl ColorValue {
                 } else {
                     Color::Rgb(*r, *g, *b)
                 }
-            },
+            }
             ColorValue::Rgb { r, g, b } => Color::Rgb(*r, *g, *b),
             ColorValue::Hex(hex) => {
                 let hex = hex.trim_start_matches('#');
@@ -140,10 +220,10 @@ impl ColorValue {
                         u8::from_str_radix(&hex[4..6], 16),
                         u8::from_str_radix(&hex[6..8], 16),
                     ) {
-                        return Color::Rgb(r, g, b); 
+                        return Color::Rgb(r, g, b);
                     }
                 }
-                Color::White 
+                Color::White
             }
             ColorValue::Named(name) => match name.to_lowercase().as_str() {
                 "black" => Color::Black,
@@ -162,8 +242,8 @@ impl ColorValue {
                 "lightblue" => Color::LightBlue,
                 "lightmagenta" => Color::LightMagenta,
                 "lightcyan" => Color::LightCyan,
-                _ => Color::White, 
-            }
+                _ => Color::White,
+            },
         }
     }
 
@@ -176,14 +256,29 @@ impl ColorValue {
 
     pub fn with_alpha(&self, alpha: f32) -> ColorValue {
         match self {
-            ColorValue::Rgba { r, g, b, a: _ } => ColorValue::Rgba { r: *r, g: *g, b: *b, a: alpha },
-            ColorValue::Rgb { r, g, b } => ColorValue::Rgba { r: *r, g: *g, b: *b, a: alpha },
+            ColorValue::Rgba { r, g, b, a: _ } => ColorValue::Rgba {
+                r: *r,
+                g: *g,
+                b: *b,
+                a: alpha,
+            },
+            ColorValue::Rgb { r, g, b } => ColorValue::Rgba {
+                r: *r,
+                g: *g,
+                b: *b,
+                a: alpha,
+            },
             ColorValue::Hex(_hex) => {
                 let color = self.to_ratatui_color();
                 if let Color::Rgb(r, g, b) = color {
                     ColorValue::Rgba { r, g, b, a: alpha }
                 } else {
-                    ColorValue::Rgba { r: 255, g: 255, b: 255, a: alpha }
+                    ColorValue::Rgba {
+                        r: 255,
+                        g: 255,
+                        b: 255,
+                        a: alpha,
+                    }
                 }
             }
             ColorValue::Named(_) => {
@@ -191,7 +286,12 @@ impl ColorValue {
                 if let Color::Rgb(r, g, b) = color {
                     ColorValue::Rgba { r, g, b, a: alpha }
                 } else {
-                    ColorValue::Rgba { r: 255, g: 255, b: 255, a: alpha }
+                    ColorValue::Rgba {
+                        r: 255,
+                        g: 255,
+                        b: 255,
+                        a: alpha,
+                    }
                 }
             }
         }
@@ -201,15 +301,15 @@ impl ColorValue {
         if alpha < 0.1 {
             return Color::Reset;
         }
-        
+
         let bg_r = 30u8;
         let bg_g = 30u8;
         let bg_b = 30u8;
-        
+
         let blended_r = ((r as f32 * alpha) + (bg_r as f32 * (1.0 - alpha))) as u8;
         let blended_g = ((g as f32 * alpha) + (bg_g as f32 * (1.0 - alpha))) as u8;
         let blended_b = ((b as f32 * alpha) + (bg_b as f32 * (1.0 - alpha))) as u8;
-        
+
         Color::Rgb(blended_r, blended_g, blended_b)
     }
 
@@ -221,7 +321,7 @@ impl ColorValue {
                 } else {
                     self.blend_with_background(*r, *g, *b, *a)
                 }
-            },
+            }
             _ => self.to_ratatui_color(),
         }
     }
@@ -232,26 +332,26 @@ impl NeoTheme {
         let path = path.as_ref();
         let content = std::fs::read_to_string(path)
             .with_context(|| format!("Failed to read theme file: {}", path.display()))?;
-        
+
         let theme: NeoTheme = toml::from_str(&content)
             .with_context(|| format!("Failed to parse theme file: {}", path.display()))?;
-        
+
         Ok(theme)
     }
 
     pub fn save_to_file<P: AsRef<Path>>(&self, path: P) -> Result<()> {
         let path = path.as_ref();
-        let content = toml::to_string_pretty(self)
-            .with_context(|| "Failed to serialize theme")?;
-        
+        let content = toml::to_string_pretty(self).with_context(|| "Failed to serialize theme")?;
+
         if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)
-                .with_context(|| format!("Failed to create theme directory: {}", parent.display()))?;
+            std::fs::create_dir_all(parent).with_context(|| {
+                format!("Failed to create theme directory: {}", parent.display())
+            })?;
         }
-        
+
         std::fs::write(path, content)
             .with_context(|| format!("Failed to write theme file: {}", path.display()))?;
-        
+
         Ok(())
     }
 
@@ -261,53 +361,201 @@ impl NeoTheme {
             author: "NeoCrim Team".to_string(),
             description: "Default dark theme for NeoCrim".to_string(),
             colors: ThemeColors {
-                background: ColorValue::Rgb { r: 30, g: 30, b: 30 },
-                foreground: ColorValue::Rgb { r: 212, g: 212, b: 212 },
-                cursor: ColorValue::Rgb { r: 255, g: 255, b: 0 },
-                selection: ColorValue::Rgb { r: 38, g: 79, b: 120 },
-                line_number: ColorValue::Rgb { r: 133, g: 133, b: 133 },
-                current_line: ColorValue::Rgb { r: 45, g: 45, b: 45 },
-                
+                background: ColorValue::Rgb {
+                    r: 30,
+                    g: 30,
+                    b: 30,
+                },
+                foreground: ColorValue::Rgb {
+                    r: 212,
+                    g: 212,
+                    b: 212,
+                },
+                cursor: ColorValue::Rgb {
+                    r: 255,
+                    g: 255,
+                    b: 0,
+                },
+                selection: ColorValue::Rgb {
+                    r: 38,
+                    g: 79,
+                    b: 120,
+                },
+                line_number: ColorValue::Rgb {
+                    r: 133,
+                    g: 133,
+                    b: 133,
+                },
+                current_line: ColorValue::Rgb {
+                    r: 45,
+                    g: 45,
+                    b: 45,
+                },
+
                 background_opacity: 1.0,
                 blur_radius: 0.0,
                 enable_glass: false,
-                
-                status_bg: ColorValue::Rgb { r: 0, g: 120, b: 215 },
-                status_fg: ColorValue::Rgb { r: 255, g: 255, b: 255 },
-                command_bg: ColorValue::Rgb { r: 30, g: 30, b: 30 },
-                command_fg: ColorValue::Rgb { r: 212, g: 212, b: 212 },
-                
-                explorer_bg: ColorValue::Rgb { r: 37, g: 37, b: 38 },
-                explorer_fg: ColorValue::Rgb { r: 212, g: 212, b: 212 },
-                explorer_selected: ColorValue::Rgb { r: 0, g: 120, b: 215 },
-                explorer_directory: ColorValue::Rgb { r: 78, g: 201, b: 176 },
-                explorer_file: ColorValue::Rgb { r: 212, g: 212, b: 212 },
-                
-                accent_color: ColorValue::Rgb { r: 0, g: 120, b: 215 },
-                border_color: ColorValue::Rgb { r: 100, g: 100, b: 100 },
-                inactive_border: ColorValue::Rgb { r: 60, g: 60, b: 60 },
-                highlight: ColorValue::Rgb { r: 255, g: 255, b: 255 },
+
+                status_bg: ColorValue::Rgb {
+                    r: 0,
+                    g: 120,
+                    b: 215,
+                },
+                status_fg: ColorValue::Rgb {
+                    r: 255,
+                    g: 255,
+                    b: 255,
+                },
+                command_bg: ColorValue::Rgb {
+                    r: 30,
+                    g: 30,
+                    b: 30,
+                },
+                command_fg: ColorValue::Rgb {
+                    r: 212,
+                    g: 212,
+                    b: 212,
+                },
+
+                explorer_bg: ColorValue::Rgb {
+                    r: 37,
+                    g: 37,
+                    b: 38,
+                },
+                explorer_fg: ColorValue::Rgb {
+                    r: 212,
+                    g: 212,
+                    b: 212,
+                },
+                explorer_selected: ColorValue::Rgb {
+                    r: 0,
+                    g: 120,
+                    b: 215,
+                },
+                explorer_directory: ColorValue::Rgb {
+                    r: 78,
+                    g: 201,
+                    b: 176,
+                },
+                explorer_file: ColorValue::Rgb {
+                    r: 212,
+                    g: 212,
+                    b: 212,
+                },
+
+                accent_color: ColorValue::Rgb {
+                    r: 0,
+                    g: 120,
+                    b: 215,
+                },
+                border_color: ColorValue::Rgb {
+                    r: 100,
+                    g: 100,
+                    b: 100,
+                },
+                inactive_border: ColorValue::Rgb {
+                    r: 60,
+                    g: 60,
+                    b: 60,
+                },
+                highlight: ColorValue::Rgb {
+                    r: 255,
+                    g: 255,
+                    b: 255,
+                },
                 shadow: ColorValue::Rgb { r: 0, g: 0, b: 0 },
-                
-                syntax_keyword: ColorValue::Rgb { r: 86, g: 156, b: 214 },
-                syntax_string: ColorValue::Rgb { r: 206, g: 145, b: 120 },
-                syntax_comment: ColorValue::Rgb { r: 106, g: 153, b: 85 },
-                syntax_function: ColorValue::Rgb { r: 220, g: 220, b: 170 },
-                syntax_type: ColorValue::Rgb { r: 78, g: 201, b: 176 },
-                syntax_constant: ColorValue::Rgb { r: 100, g: 102, b: 149 },
-                syntax_variable: ColorValue::Rgb { r: 156, g: 220, b: 254 },
-                syntax_number: ColorValue::Rgb { r: 181, g: 206, b: 168 },
-                syntax_operator: ColorValue::Rgb { r: 212, g: 212, b: 212 },
-                syntax_punctuation: ColorValue::Rgb { r: 212, g: 212, b: 212 },
-                
-                syntax_attribute: ColorValue::Rgb { r: 156, g: 220, b: 254 },
-                syntax_special: ColorValue::Rgb { r: 255, g: 215, b: 0 },
-                syntax_tag: ColorValue::Rgb { r: 86, g: 156, b: 214 },
-                syntax_link: ColorValue::Rgb { r: 86, g: 156, b: 214 },
-                error_color: ColorValue::Rgb { r: 244, g: 67, b: 54 },
-                warning_color: ColorValue::Rgb { r: 255, g: 152, b: 0 },
-                info_color: ColorValue::Rgb { r: 33, g: 150, b: 243 },
-                success_color: ColorValue::Rgb { r: 76, g: 175, b: 80 },
+
+                syntax_keyword: ColorValue::Rgb {
+                    r: 86,
+                    g: 156,
+                    b: 214,
+                },
+                syntax_string: ColorValue::Rgb {
+                    r: 206,
+                    g: 145,
+                    b: 120,
+                },
+                syntax_comment: ColorValue::Rgb {
+                    r: 106,
+                    g: 153,
+                    b: 85,
+                },
+                syntax_function: ColorValue::Rgb {
+                    r: 220,
+                    g: 220,
+                    b: 170,
+                },
+                syntax_type: ColorValue::Rgb {
+                    r: 78,
+                    g: 201,
+                    b: 176,
+                },
+                syntax_constant: ColorValue::Rgb {
+                    r: 100,
+                    g: 102,
+                    b: 149,
+                },
+                syntax_variable: ColorValue::Rgb {
+                    r: 156,
+                    g: 220,
+                    b: 254,
+                },
+                syntax_number: ColorValue::Rgb {
+                    r: 181,
+                    g: 206,
+                    b: 168,
+                },
+                syntax_operator: ColorValue::Rgb {
+                    r: 212,
+                    g: 212,
+                    b: 212,
+                },
+                syntax_punctuation: ColorValue::Rgb {
+                    r: 212,
+                    g: 212,
+                    b: 212,
+                },
+
+                syntax_attribute: ColorValue::Rgb {
+                    r: 156,
+                    g: 220,
+                    b: 254,
+                },
+                syntax_special: ColorValue::Rgb {
+                    r: 255,
+                    g: 215,
+                    b: 0,
+                },
+                syntax_tag: ColorValue::Rgb {
+                    r: 86,
+                    g: 156,
+                    b: 214,
+                },
+                syntax_link: ColorValue::Rgb {
+                    r: 86,
+                    g: 156,
+                    b: 214,
+                },
+                error_color: ColorValue::Rgb {
+                    r: 244,
+                    g: 67,
+                    b: 54,
+                },
+                warning_color: ColorValue::Rgb {
+                    r: 255,
+                    g: 152,
+                    b: 0,
+                },
+                info_color: ColorValue::Rgb {
+                    r: 33,
+                    g: 150,
+                    b: 243,
+                },
+                success_color: ColorValue::Rgb {
+                    r: 76,
+                    g: 175,
+                    b: 80,
+                },
             },
         }
     }
@@ -318,60 +566,188 @@ impl NeoTheme {
             author: "NeoCrim Team".to_string(),
             description: "Default light theme for NeoCrim".to_string(),
             colors: ThemeColors {
-                background: ColorValue::Rgb { r: 255, g: 255, b: 255 },
-                foreground: ColorValue::Rgb { r: 51, g: 51, b: 51 },
+                background: ColorValue::Rgb {
+                    r: 255,
+                    g: 255,
+                    b: 255,
+                },
+                foreground: ColorValue::Rgb {
+                    r: 51,
+                    g: 51,
+                    b: 51,
+                },
                 cursor: ColorValue::Rgb { r: 0, g: 0, b: 255 },
-                selection: ColorValue::Rgb { r: 173, g: 214, b: 255 },
-                line_number: ColorValue::Rgb { r: 133, g: 133, b: 133 },
-                current_line: ColorValue::Rgb { r: 245, g: 245, b: 245 },
-                
+                selection: ColorValue::Rgb {
+                    r: 173,
+                    g: 214,
+                    b: 255,
+                },
+                line_number: ColorValue::Rgb {
+                    r: 133,
+                    g: 133,
+                    b: 133,
+                },
+                current_line: ColorValue::Rgb {
+                    r: 245,
+                    g: 245,
+                    b: 245,
+                },
+
                 background_opacity: 1.0,
                 blur_radius: 0.0,
                 enable_glass: false,
-                
-                status_bg: ColorValue::Rgb { r: 0, g: 120, b: 215 },
-                status_fg: ColorValue::Rgb { r: 255, g: 255, b: 255 },
-                command_bg: ColorValue::Rgb { r: 255, g: 255, b: 255 },
-                command_fg: ColorValue::Rgb { r: 51, g: 51, b: 51 },
-                
-                explorer_bg: ColorValue::Rgb { r: 246, g: 246, b: 246 },
-                explorer_fg: ColorValue::Rgb { r: 51, g: 51, b: 51 },
-                explorer_selected: ColorValue::Rgb { r: 0, g: 120, b: 215 },
-                explorer_directory: ColorValue::Rgb { r: 0, g: 120, b: 215 },
-                explorer_file: ColorValue::Rgb { r: 51, g: 51, b: 51 },
-                
-                accent_color: ColorValue::Rgb { r: 0, g: 120, b: 215 },
-                border_color: ColorValue::Rgb { r: 200, g: 200, b: 200 },
-                inactive_border: ColorValue::Rgb { r: 220, g: 220, b: 220 },
+
+                status_bg: ColorValue::Rgb {
+                    r: 0,
+                    g: 120,
+                    b: 215,
+                },
+                status_fg: ColorValue::Rgb {
+                    r: 255,
+                    g: 255,
+                    b: 255,
+                },
+                command_bg: ColorValue::Rgb {
+                    r: 255,
+                    g: 255,
+                    b: 255,
+                },
+                command_fg: ColorValue::Rgb {
+                    r: 51,
+                    g: 51,
+                    b: 51,
+                },
+
+                explorer_bg: ColorValue::Rgb {
+                    r: 246,
+                    g: 246,
+                    b: 246,
+                },
+                explorer_fg: ColorValue::Rgb {
+                    r: 51,
+                    g: 51,
+                    b: 51,
+                },
+                explorer_selected: ColorValue::Rgb {
+                    r: 0,
+                    g: 120,
+                    b: 215,
+                },
+                explorer_directory: ColorValue::Rgb {
+                    r: 0,
+                    g: 120,
+                    b: 215,
+                },
+                explorer_file: ColorValue::Rgb {
+                    r: 51,
+                    g: 51,
+                    b: 51,
+                },
+
+                accent_color: ColorValue::Rgb {
+                    r: 0,
+                    g: 120,
+                    b: 215,
+                },
+                border_color: ColorValue::Rgb {
+                    r: 200,
+                    g: 200,
+                    b: 200,
+                },
+                inactive_border: ColorValue::Rgb {
+                    r: 220,
+                    g: 220,
+                    b: 220,
+                },
                 highlight: ColorValue::Rgb { r: 0, g: 0, b: 0 },
-                shadow: ColorValue::Rgb { r: 128, g: 128, b: 128 },
-                
+                shadow: ColorValue::Rgb {
+                    r: 128,
+                    g: 128,
+                    b: 128,
+                },
+
                 syntax_keyword: ColorValue::Rgb { r: 0, g: 0, b: 255 },
-                syntax_string: ColorValue::Rgb { r: 163, g: 21, b: 21 },
+                syntax_string: ColorValue::Rgb {
+                    r: 163,
+                    g: 21,
+                    b: 21,
+                },
                 syntax_comment: ColorValue::Rgb { r: 0, g: 128, b: 0 },
-                syntax_function: ColorValue::Rgb { r: 121, g: 94, b: 38 },
-                syntax_type: ColorValue::Rgb { r: 43, g: 145, b: 175 },
-                syntax_constant: ColorValue::Rgb { r: 111, g: 66, b: 193 },
-                syntax_variable: ColorValue::Rgb { r: 0, g: 112, b: 193 },
-                syntax_number: ColorValue::Rgb { r: 9, g: 134, b: 88 },
-                syntax_operator: ColorValue::Rgb { r: 51, g: 51, b: 51 },
-                syntax_punctuation: ColorValue::Rgb { r: 51, g: 51, b: 51 },
-                
-                syntax_attribute: ColorValue::Rgb { r: 0, g: 112, b: 193 },
-                syntax_special: ColorValue::Rgb { r: 255, g: 140, b: 0 },
+                syntax_function: ColorValue::Rgb {
+                    r: 121,
+                    g: 94,
+                    b: 38,
+                },
+                syntax_type: ColorValue::Rgb {
+                    r: 43,
+                    g: 145,
+                    b: 175,
+                },
+                syntax_constant: ColorValue::Rgb {
+                    r: 111,
+                    g: 66,
+                    b: 193,
+                },
+                syntax_variable: ColorValue::Rgb {
+                    r: 0,
+                    g: 112,
+                    b: 193,
+                },
+                syntax_number: ColorValue::Rgb {
+                    r: 9,
+                    g: 134,
+                    b: 88,
+                },
+                syntax_operator: ColorValue::Rgb {
+                    r: 51,
+                    g: 51,
+                    b: 51,
+                },
+                syntax_punctuation: ColorValue::Rgb {
+                    r: 51,
+                    g: 51,
+                    b: 51,
+                },
+
+                syntax_attribute: ColorValue::Rgb {
+                    r: 0,
+                    g: 112,
+                    b: 193,
+                },
+                syntax_special: ColorValue::Rgb {
+                    r: 255,
+                    g: 140,
+                    b: 0,
+                },
                 syntax_tag: ColorValue::Rgb { r: 0, g: 0, b: 255 },
                 syntax_link: ColorValue::Rgb { r: 0, g: 0, b: 255 },
-                error_color: ColorValue::Rgb { r: 244, g: 67, b: 54 },
-                warning_color: ColorValue::Rgb { r: 255, g: 152, b: 0 },
-                info_color: ColorValue::Rgb { r: 33, g: 150, b: 243 },
-                success_color: ColorValue::Rgb { r: 76, g: 175, b: 80 },
+                error_color: ColorValue::Rgb {
+                    r: 244,
+                    g: 67,
+                    b: 54,
+                },
+                warning_color: ColorValue::Rgb {
+                    r: 255,
+                    g: 152,
+                    b: 0,
+                },
+                info_color: ColorValue::Rgb {
+                    r: 33,
+                    g: 150,
+                    b: 243,
+                },
+                success_color: ColorValue::Rgb {
+                    r: 76,
+                    g: 175,
+                    b: 80,
+                },
             },
         }
     }
 
     pub fn to_legacy_theme(&self) -> crate::ui::theme::Theme {
         use ratatui::style::Style;
-        
+
         crate::ui::theme::Theme {
             background: self.colors.background.to_ratatui_color(),
             foreground: self.colors.foreground.to_ratatui_color(),
@@ -385,7 +761,9 @@ impl NeoTheme {
             command_fg: self.colors.command_fg.to_ratatui_color(),
             terminal_border: Style::default().fg(self.colors.border_color.to_ratatui_color()),
             terminal_title: Style::default().fg(self.colors.status_fg.to_ratatui_color()),
-            terminal_background: Style::default().bg(self.colors.background.to_ratatui_color()).fg(self.colors.foreground.to_ratatui_color()),
+            terminal_background: Style::default()
+                .bg(self.colors.background.to_ratatui_color())
+                .fg(self.colors.foreground.to_ratatui_color()),
             terminal_command: Style::default().fg(self.colors.syntax_keyword.to_ratatui_color()),
             terminal_output: Style::default().fg(self.colors.foreground.to_ratatui_color()),
             terminal_error: Style::default().fg(self.colors.error_color.to_ratatui_color()),

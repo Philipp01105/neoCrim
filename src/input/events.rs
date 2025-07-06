@@ -1,8 +1,8 @@
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
-use crossterm::terminal;
 use crate::app::App;
 use crate::editor::{Cursor, Mode};
 use crate::Result;
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use crossterm::terminal;
 use std::time::Duration;
 
 pub struct EventHandler {
@@ -26,9 +26,7 @@ impl EventHandler {
                         self.handle_key_event(app, key_event)?;
                     }
                 }
-                Event::Resize(_, _) => {
-
-                }
+                Event::Resize(_, _) => {}
                 _ => {}
             }
         }
@@ -36,8 +34,13 @@ impl EventHandler {
     }
 
     fn handle_key_event(&mut self, app: &mut App, key_event: KeyEvent) -> Result<()> {
-        log::debug!("Key event received: {:?} in mode: {:?}, paste_mode_remaining: {}", key_event, app.mode, self.paste_mode_remaining);
-        
+        log::debug!(
+            "Key event received: {:?} in mode: {:?}, paste_mode_remaining: {}",
+            key_event,
+            app.mode,
+            self.paste_mode_remaining
+        );
+
         if self.paste_mode_remaining > 0 {
             if let KeyCode::Char(c) = key_event.code {
                 self.paste_mode_remaining -= 1;
@@ -45,7 +48,10 @@ impl EventHandler {
                            c, c as u32, key_event.modifiers, self.paste_mode_remaining);
                 return Ok(());
             } else {
-                log::debug!("Non-character event during paste mode: {:?}", key_event.code);
+                log::debug!(
+                    "Non-character event during paste mode: {:?}",
+                    key_event.code
+                );
             }
         }
         if app.file_change_dialog.visible {
@@ -164,7 +170,7 @@ impl EventHandler {
 
         if key_event.modifiers.contains(KeyModifiers::CONTROL) {
             if key_event.modifiers.contains(KeyModifiers::SHIFT) {
-               match key_event.code {
+                match key_event.code {
                     KeyCode::Left => {
                         if !app.selection.active {
                             app.start_selection();
@@ -186,7 +192,7 @@ impl EventHandler {
                     _ => {}
                 }
             }
-            
+
             match key_event.code {
                 KeyCode::Char('c') => {
                     app.copy_selection();
@@ -205,23 +211,31 @@ impl EventHandler {
                 KeyCode::Char('v') => {
                     let clipboard_text = crate::editor::Clipboard::get_text();
                     if !clipboard_text.is_empty() {
-                       let char_count = clipboard_text.chars().count();
+                        let char_count = clipboard_text.chars().count();
                         self.paste_mode_remaining = char_count;
-                        log::debug!("Setting paste mode for {} characters: '{}'", char_count, clipboard_text);
-                        
+                        log::debug!(
+                            "Setting paste mode for {} characters: '{}'",
+                            char_count,
+                            clipboard_text
+                        );
+
                         app.paste();
                         app.set_status_message("Pasted from clipboard".to_string());
                     }
                     return Ok(());
                 }
-               KeyCode::Char(c) if c as u8 == 22 => {
+                KeyCode::Char(c) if c as u8 == 22 => {
                     log::debug!("Ctrl+V (ASCII 22) pressed in normal mode");
                     let clipboard_text = crate::editor::Clipboard::get_text();
                     if !clipboard_text.is_empty() {
                         let char_count = clipboard_text.chars().count();
                         self.paste_mode_remaining = char_count;
-                        log::debug!("Setting paste mode for {} characters: '{}'", char_count, clipboard_text);
-                        
+                        log::debug!(
+                            "Setting paste mode for {} characters: '{}'",
+                            char_count,
+                            clipboard_text
+                        );
+
                         app.paste();
                         app.set_status_message("Pasted from clipboard".to_string());
                     }
@@ -325,8 +339,14 @@ impl EventHandler {
         } else {
             if app.selection.active {
                 match key_event.code {
-                    KeyCode::Left | KeyCode::Right | KeyCode::Up | KeyCode::Down |
-                    KeyCode::Char('h') | KeyCode::Char('j') | KeyCode::Char('k') | KeyCode::Char('l') => {
+                    KeyCode::Left
+                    | KeyCode::Right
+                    | KeyCode::Up
+                    | KeyCode::Down
+                    | KeyCode::Char('h')
+                    | KeyCode::Char('j')
+                    | KeyCode::Char('k')
+                    | KeyCode::Char('l') => {
                         app.clear_selection();
                     }
                     _ => {}
@@ -489,28 +509,23 @@ impl EventHandler {
                     }
                 }
             }
-            KeyCode::Char('h') | KeyCode::Left => {
-                match app.file_explorer.go_to_parent() {
-                    Ok(()) => {
-                    }
-                    Err(e) => {
-                        app.set_status_message(format!("{}", e));
-                    }
+            KeyCode::Char('h') | KeyCode::Left => match app.file_explorer.go_to_parent() {
+                Ok(()) => {}
+                Err(e) => {
+                    app.set_status_message(format!("{}", e));
                 }
-            }
+            },
             KeyCode::F(2) | KeyCode::Esc => {
                 app.file_explorer.toggle_visibility();
             }
-            KeyCode::Char('r') => {
-                match app.file_explorer.refresh() {
-                    Ok(()) => {
-                        app.set_status_message("Directory refreshed".to_string());
-                    }
-                    Err(e) => {
-                        app.set_status_message(format!("Error refreshing: {}", e));
-                    }
+            KeyCode::Char('r') => match app.file_explorer.refresh() {
+                Ok(()) => {
+                    app.set_status_message("Directory refreshed".to_string());
                 }
-            }
+                Err(e) => {
+                    app.set_status_message(format!("Error refreshing: {}", e));
+                }
+            },
             KeyCode::Char('p') => {
                 let current_path = app.file_explorer.get_current_path();
                 app.set_status_message(format!("Current: {}", current_path.display()));
@@ -522,11 +537,19 @@ impl EventHandler {
 
     fn handle_insert_mode(&mut self, app: &mut App, key_event: KeyEvent) -> Result<()> {
         let viewport_width = self.get_viewport_width(app).unwrap_or(80);
-        
-        log::debug!("Insert mode key event: {:?} (modifiers: {:?}, code: {:?})", key_event, key_event.modifiers, key_event.code);
+
+        log::debug!(
+            "Insert mode key event: {:?} (modifiers: {:?}, code: {:?})",
+            key_event,
+            key_event.modifiers,
+            key_event.code
+        );
 
         if key_event.modifiers.contains(KeyModifiers::CONTROL) {
-            log::debug!("CONTROL modifier detected in insert mode with key: {:?}", key_event.code);
+            log::debug!(
+                "CONTROL modifier detected in insert mode with key: {:?}",
+                key_event.code
+            );
             if key_event.modifiers.contains(KeyModifiers::SHIFT) {
                 log::debug!("CONTROL+SHIFT modifier detected in insert mode");
                 match key_event.code {
@@ -551,7 +574,7 @@ impl EventHandler {
                     _ => {}
                 }
             }
-            
+
             match key_event.code {
                 KeyCode::Char('z') => {
                     log::debug!("Ctrl+Z detected in insert mode");
@@ -584,10 +607,10 @@ impl EventHandler {
                     let clipboard_text = crate::editor::Clipboard::get_text();
                     log::debug!("Clipboard content: '{}'", clipboard_text);
                     if !clipboard_text.is_empty() {
-                       let char_count = clipboard_text.chars().count() + 5; 
+                        let char_count = clipboard_text.chars().count() + 5;
                         self.paste_mode_remaining = char_count;
                         log::debug!("*** SETTING PASTE MODE for {} characters (with safety buffer): '{}' ***", char_count, clipboard_text);
-                        
+
                         app.paste();
                         app.set_status_message("Pasted from clipboard".to_string());
                     } else {
@@ -601,9 +624,13 @@ impl EventHandler {
                     if !clipboard_text.is_empty() {
                         let char_count = clipboard_text.chars().count();
                         self.paste_mode_remaining = char_count;
-                        log::debug!("Setting paste mode for {} characters: '{}'", char_count, clipboard_text);
-                        
-                       app.paste();
+                        log::debug!(
+                            "Setting paste mode for {} characters: '{}'",
+                            char_count,
+                            clipboard_text
+                        );
+
+                        app.paste();
                         app.set_status_message("Pasted from clipboard".to_string());
                     }
                     return Ok(());
@@ -718,7 +745,7 @@ impl EventHandler {
             KeyCode::Esc => {
                 app.mode = Mode::Normal;
                 app.clear_selection();
-                
+
                 let buffer = app.current_buffer().clone();
                 let line_len = buffer.line_len(app.cursor.line);
                 if line_len > 0 && app.cursor.col > line_len {
@@ -772,70 +799,90 @@ impl EventHandler {
                 app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Char(c) => {
-                log::debug!("Character received in insert mode: '{}' (code: {}) with modifiers: {:?}", c, c as u32, key_event.modifiers);
-                
-               if c.is_control() {
+                log::debug!(
+                    "Character received in insert mode: '{}' (code: {}) with modifiers: {:?}",
+                    c,
+                    c as u32,
+                    key_event.modifiers
+                );
+
+                if c.is_control() {
                     log::debug!("Rejecting control character: {:?} (code: {})", c, c as u32);
                     return Ok(());
                 }
-                
-               match c as u8 {
-                    22 => { 
+
+                match c as u8 {
+                    22 => {
                         log::debug!("Ctrl+V (ASCII 22) detected as char in insert mode");
                         let clipboard_text = crate::editor::Clipboard::get_text();
                         if !clipboard_text.is_empty() {
                             let char_count = clipboard_text.chars().count();
                             self.paste_mode_remaining = char_count;
-                            log::debug!("Setting paste mode for {} characters: '{}'", char_count, clipboard_text);
-                            
-                           app.paste();
+                            log::debug!(
+                                "Setting paste mode for {} characters: '{}'",
+                                char_count,
+                                clipboard_text
+                            );
+
+                            app.paste();
                             app.set_status_message("Pasted from clipboard".to_string());
                         }
                         return Ok(());
                     }
                     _ => {}
                 }
-                
+
                 match c {
                     ':' if key_event.modifiers == KeyModifiers::NONE => {
-                        log::debug!("Rejecting ':' with no modifiers - likely escape sequence artifact");
+                        log::debug!(
+                            "Rejecting ':' with no modifiers - likely escape sequence artifact"
+                        );
                         return Ok(());
                     }
                     '\\' if key_event.modifiers == KeyModifiers::NONE => {
-                        log::debug!("Rejecting '\\' with no modifiers - likely escape sequence artifact");
+                        log::debug!(
+                            "Rejecting '\\' with no modifiers - likely escape sequence artifact"
+                        );
                         return Ok(());
                     }
                     _ => {}
                 }
-                
-                log::debug!("Processing character: '{}' (code: {}) with modifiers: {:?}", c, c as u32, key_event.modifiers);
-                
+
+                log::debug!(
+                    "Processing character: '{}' (code: {}) with modifiers: {:?}",
+                    c,
+                    c as u32,
+                    key_event.modifiers
+                );
+
                 if c == ':' && app.config.editor.fast_command_line {
                     if key_event.modifiers == KeyModifiers::NONE {
-                        log::debug!("Rejecting ':' with no modifiers - likely escape sequence artifact");
+                        log::debug!(
+                            "Rejecting ':' with no modifiers - likely escape sequence artifact"
+                        );
                         return Ok(());
                     }
                     app.mode = Mode::Command;
                     return Ok(());
                 }
-                
+
                 app.delete_selection();
                 app.save_undo_state();
-                
+
                 let cursor_line = app.cursor.line;
                 let cursor_col = app.cursor.col;
                 let buffer = app.current_buffer_mut();
                 buffer.insert_char(cursor_line, cursor_col, c);
-                
+
                 app.cursor.col += 1;
                 app.cursor.desired_col = app.cursor.col;
                 app.reset_cursor_blink();
-                
+
                 app.update_horizontal_scroll(viewport_width);
             }
             KeyCode::Enter => {
                 app.delete_selection();
-                
+
                 let cursor_line = app.cursor.line;
                 let cursor_col = app.cursor.col;
                 app.save_undo_state();
@@ -854,7 +901,7 @@ impl EventHandler {
                     app.update_horizontal_scroll(viewport_width);
                     return Ok(());
                 }
-                
+
                 app.save_undo_state();
                 if app.cursor.col > 0 {
                     let buffer = app.current_buffer().clone();
@@ -889,8 +936,8 @@ impl EventHandler {
                     app.update_horizontal_scroll(viewport_width);
                     return Ok(());
                 }
-                
-                app.save_undo_state(); 
+
+                app.save_undo_state();
                 let cursor_line = app.cursor.line;
                 let cursor_col = app.cursor.col;
                 let buffer = app.current_buffer_mut();
@@ -900,7 +947,7 @@ impl EventHandler {
             }
             KeyCode::Tab => {
                 app.delete_selection();
-                
+
                 app.save_undo_state();
                 let tab_size = app.config.editor.tab_size;
                 let spaces = " ".repeat(tab_size);
@@ -1044,16 +1091,20 @@ impl EventHandler {
                 }
             }
             KeyCode::Char(c) => {
-               if c.is_control() {
-                    log::debug!("Rejecting control character in command mode: {:?} (code: {})", c, c as u32);
+                if c.is_control() {
+                    log::debug!(
+                        "Rejecting control character in command mode: {:?} (code: {})",
+                        c,
+                        c as u32
+                    );
                     return Ok(());
                 }
-                
+
                 if c as u8 == 22 {
                     log::debug!("Ctrl+V (ASCII 22) detected in command mode, ignoring");
                     return Ok(());
                 }
-                
+
                 if key_event.modifiers == KeyModifiers::NONE {
                     match c {
                         '\\' | 'p' => {
@@ -1063,8 +1114,12 @@ impl EventHandler {
                         _ => {}
                     }
                 }
-                
-                log::debug!("Adding character to command line: '{}' (code: {})", c, c as u32);
+
+                log::debug!(
+                    "Adding character to command line: '{}' (code: {})",
+                    c,
+                    c as u32
+                );
                 app.command_line.push(c);
                 app.clear_error_message();
             }
@@ -1132,7 +1187,10 @@ impl EventHandler {
                     let target_path = std::path::PathBuf::from(parts[1]);
                     match app.file_explorer.navigate_to(&target_path) {
                         Ok(()) => {
-                            app.set_status_message(format!("Changed directory to: {}", target_path.display()));
+                            app.set_status_message(format!(
+                                "Changed directory to: {}",
+                                target_path.display()
+                            ));
                         }
                         Err(e) => {
                             app.set_error_message(format!("Error changing directory: {}", e));
@@ -1144,25 +1202,30 @@ impl EventHandler {
             }
             "explorer" => {
                 app.file_explorer.toggle_visibility();
-                let status = if app.file_explorer.visible { "shown" } else { "hidden" };
+                let status = if app.file_explorer.visible {
+                    "shown"
+                } else {
+                    "hidden"
+                };
                 app.set_status_message(format!("File explorer {}", status));
             }
-            "refresh" => {
-                match app.file_explorer.refresh() {
-                    Ok(()) => {
-                        app.set_status_message("File explorer refreshed".to_string());
-                    }
-                    Err(e) => {
-                        app.set_error_message(format!("Error refreshing explorer: {}", e));
-                    }
+            "refresh" => match app.file_explorer.refresh() {
+                Ok(()) => {
+                    app.set_status_message("File explorer refreshed".to_string());
                 }
-            }
+                Err(e) => {
+                    app.set_error_message(format!("Error refreshing explorer: {}", e));
+                }
+            },
             "theme" => {
                 if parts.len() > 1 {
                     if let Ok(index) = parts[1].parse::<usize>() {
                         match app.config.set_theme_by_index(index) {
                             Ok(()) => {
-                                app.set_status_message(format!("Theme changed to: {}", app.config.current_theme.name));
+                                app.set_status_message(format!(
+                                    "Theme changed to: {}",
+                                    app.config.current_theme.name
+                                ));
                             }
                             Err(e) => {
                                 app.set_error_message(format!("Error setting theme: {}", e));
@@ -1172,7 +1235,10 @@ impl EventHandler {
                         let themes = app.config.list_available_themes();
                         let mut message = "Available themes:\n".to_string();
                         for (index, name, author, description) in themes {
-                            message.push_str(&format!("  {}: {} by {} - {}\n", index, name, author, description));
+                            message.push_str(&format!(
+                                "  {}: {} by {} - {}\n",
+                                index, name, author, description
+                            ));
                         }
                         app.set_status_message(message);
                     } else if parts[1] == "default" {
@@ -1180,10 +1246,16 @@ impl EventHandler {
                             if let Ok(index) = parts[2].parse::<usize>() {
                                 match app.config.set_default_theme_by_index(index) {
                                     Ok(()) => {
-                                        app.set_status_message(format!("Default theme {} loaded: {}", index, app.config.current_theme.name));
+                                        app.set_status_message(format!(
+                                            "Default theme {} loaded: {}",
+                                            index, app.config.current_theme.name
+                                        ));
                                     }
                                     Err(e) => {
-                                        app.set_error_message(format!("Error setting default theme: {}", e));
+                                        app.set_error_message(format!(
+                                            "Error setting default theme: {}",
+                                            e
+                                        ));
                                     }
                                 }
                             } else {
@@ -1191,7 +1263,8 @@ impl EventHandler {
                             }
                         } else {
                             let default_themes = app.config.get_default_themes();
-                            let mut message = "Default themes (from /themes directory):\n".to_string();
+                            let mut message =
+                                "Default themes (from /themes directory):\n".to_string();
                             for (index, theme_name) in default_themes.iter().enumerate() {
                                 message.push_str(&format!("  {}: {}\n", index, theme_name));
                             }
@@ -1201,27 +1274,40 @@ impl EventHandler {
                     } else {
                         match app.config.set_theme_by_name(parts[1]) {
                             Ok(()) => {
-                                app.set_status_message(format!("Theme changed to: {}", app.config.current_theme.name));
+                                app.set_status_message(format!(
+                                    "Theme changed to: {}",
+                                    app.config.current_theme.name
+                                ));
                             }
                             Err(_) => {
                                 let theme_path = std::path::PathBuf::from(parts[1]);
 
                                 if let Some(extension) = theme_path.extension() {
                                     if extension != "nctheme" {
-                                        app.set_error_message("Theme files must have .nctheme extension".to_string());
+                                        app.set_error_message(
+                                            "Theme files must have .nctheme extension".to_string(),
+                                        );
                                         return Ok(());
                                     }
                                 } else {
-                                    app.set_error_message("Theme files must have .nctheme extension".to_string());
+                                    app.set_error_message(
+                                        "Theme files must have .nctheme extension".to_string(),
+                                    );
                                     return Ok(());
                                 }
 
                                 match app.config.set_theme(&theme_path) {
                                     Ok(()) => {
-                                        app.set_status_message(format!("Theme loaded: {}", app.config.current_theme.name));
+                                        app.set_status_message(format!(
+                                            "Theme loaded: {}",
+                                            app.config.current_theme.name
+                                        ));
                                     }
                                     Err(e) => {
-                                        app.set_error_message(format!("Error loading theme: {}", e));
+                                        app.set_error_message(format!(
+                                            "Error loading theme: {}",
+                                            e
+                                        ));
                                     }
                                 }
                             }
@@ -1239,38 +1325,42 @@ impl EventHandler {
             "goto" | "g" => {
                 if parts.len() > 1 {
                     let arg = parts[1];
-                    
+
                     if arg.ends_with('j') || arg.ends_with('k') {
                         let direction = arg.chars().last().unwrap();
-                        let number_part = &arg[..arg.len()-1];
-                        
+                        let number_part = &arg[..arg.len() - 1];
+
                         if let Ok(steps) = number_part.parse::<usize>() {
                             let buffer = app.current_buffer();
                             match direction {
                                 'j' => {
-                                    app.cursor.line = (app.cursor.line + steps).min(buffer.line_count().saturating_sub(1));
+                                    app.cursor.line = (app.cursor.line + steps)
+                                        .min(buffer.line_count().saturating_sub(1));
                                 }
                                 'k' => {
                                     app.cursor.line = app.cursor.line.saturating_sub(steps);
                                 }
-                                _ => unreachable!()
+                                _ => unreachable!(),
                             }
                             app.cursor.col = 0;
                             app.cursor.desired_col = 0;
-                            app.set_status_message(format!("Moved {} lines {}", steps, 
-                                if direction == 'j' { "down" } else { "up" }));
+                            app.set_status_message(format!(
+                                "Moved {} lines {}",
+                                steps,
+                                if direction == 'j' { "down" } else { "up" }
+                            ));
                         } else {
                             app.set_error_message("Invalid number in goto command".to_string());
                         }
-                    }
-                    else if let Ok(line_num) = arg.parse::<usize>() {
+                    } else if let Ok(line_num) = arg.parse::<usize>() {
                         let buffer = app.current_buffer();
                         if line_num > 0 && line_num <= buffer.line_count() {
                             if app.config.editor.relative_line_numbers {
                                 if line_num <= app.cursor.line {
                                     app.cursor.line = app.cursor.line.saturating_sub(line_num);
                                 } else {
-                                    app.cursor.line = (app.cursor.line + line_num).min(buffer.line_count() - 1);
+                                    app.cursor.line =
+                                        (app.cursor.line + line_num).min(buffer.line_count() - 1);
                                 }
                             } else {
                                 app.cursor.line = line_num - 1;
@@ -1279,17 +1369,27 @@ impl EventHandler {
                             app.cursor.desired_col = 0;
                             app.set_status_message(format!("Jumped to line {}", line_num));
                         } else {
-                            app.set_error_message(format!("Line {} out of range (1-{})", line_num, buffer.line_count()));
+                            app.set_error_message(format!(
+                                "Line {} out of range (1-{})",
+                                line_num,
+                                buffer.line_count()
+                            ));
                         }
                     } else {
                         let query = parts[1..].join(" ");
                         app.search(&query);
                         if !app.search_state.results.is_empty() {
-                            app.set_status_message(format!("Found {} matches - Use Up/Down arrows to navigate", app.search_state.results.len()));
+                            app.set_status_message(format!(
+                                "Found {} matches - Use Up/Down arrows to navigate",
+                                app.search_state.results.len()
+                            ));
                         }
                     }
                 } else {
-                    app.set_error_message("Usage: :goto <line_number> or :goto <number>j/k or :goto <search_pattern>".to_string());
+                    app.set_error_message(
+                        "Usage: :goto <line_number> or :goto <number>j/k or :goto <search_pattern>"
+                            .to_string(),
+                    );
                 }
             }
             "help" | "h" => {
@@ -1313,24 +1413,24 @@ impl EventHandler {
                 } else {
                     for i in 1..parts.len() {
                         let setting = parts[i];
-                        
+
                         if setting.ends_with('?') {
-                            let setting_name = &setting[..setting.len()-1];
+                            let setting_name = &setting[..setting.len() - 1];
                             let display = app.config.get_setting_display(setting_name);
                             app.set_status_message(display);
                             continue;
                         }
-                        
+
                         if let Some(eq_pos) = setting.find('=') {
                             let (key, value) = setting.split_at(eq_pos);
-                            let value = &value[1..]; 
+                            let value = &value[1..];
                             if let Err(e) = self.handle_set_assignment(app, key, value) {
                                 app.set_error_message(e.to_string());
                                 return Ok(());
                             }
                             continue;
                         }
-                        
+
                         if let Err(e) = self.handle_set_flag(app, setting) {
                             app.set_error_message(e.to_string());
                             return Ok(());
@@ -1354,7 +1454,10 @@ impl EventHandler {
                 }
             }
             _ => {
-                app.set_error_message(format!("Unknown command: {}. Type :help for available commands", parts[0]));
+                app.set_error_message(format!(
+                    "Unknown command: {}. Type :help for available commands",
+                    parts[0]
+                ));
             }
         }
         Ok(())
@@ -1382,19 +1485,22 @@ impl EventHandler {
                     return Err(anyhow::anyhow!("Invalid scroll offset: {}", value));
                 }
             }
-            "nu" | "number" | "line_numbers" => {
-                match value.to_lowercase().as_str() {
-                    "true" | "1" => {
-                        app.config.set_line_numbers(true)?;
-                        app.set_status_message("Line numbers enabled".to_string());
-                    }
-                    "false" | "0" => {
-                        app.config.set_line_numbers(false)?;
-                        app.set_status_message("Line numbers disabled".to_string());
-                    }
-                    _ => return Err(anyhow::anyhow!("Invalid value for line numbers: {} (use true/false)", value)),
+            "nu" | "number" | "line_numbers" => match value.to_lowercase().as_str() {
+                "true" | "1" => {
+                    app.config.set_line_numbers(true)?;
+                    app.set_status_message("Line numbers enabled".to_string());
                 }
-            }
+                "false" | "0" => {
+                    app.config.set_line_numbers(false)?;
+                    app.set_status_message("Line numbers disabled".to_string());
+                }
+                _ => {
+                    return Err(anyhow::anyhow!(
+                        "Invalid value for line numbers: {} (use true/false)",
+                        value
+                    ))
+                }
+            },
             "rnu" | "relativenumber" | "relative_line_numbers" => {
                 match value.to_lowercase().as_str() {
                     "true" | "1" => {
@@ -1405,100 +1511,126 @@ impl EventHandler {
                         app.config.set_relative_line_numbers(false)?;
                         app.set_status_message("Relative line numbers disabled".to_string());
                     }
-                    _ => return Err(anyhow::anyhow!("Invalid value for relative line numbers: {} (use true/false)", value)),
+                    _ => {
+                        return Err(anyhow::anyhow!(
+                            "Invalid value for relative line numbers: {} (use true/false)",
+                            value
+                        ))
+                    }
                 }
             }
-            "et" | "expandtab" | "insert_tabs" => {
-                match value.to_lowercase().as_str() {
-                    "true" | "1" => {
-                        app.config.set_insert_tabs(true)?;
-                        app.set_status_message("Expand tabs enabled (tabs as spaces)".to_string());
-                    }
-                    "false" | "0" => {
-                        app.config.set_insert_tabs(false)?;
-                        app.set_status_message("Expand tabs disabled (use actual tabs)".to_string());
-                    }
-                    _ => return Err(anyhow::anyhow!("Invalid value for expand tabs: {} (use true/false)", value)),
+            "et" | "expandtab" | "insert_tabs" => match value.to_lowercase().as_str() {
+                "true" | "1" => {
+                    app.config.set_insert_tabs(true)?;
+                    app.set_status_message("Expand tabs enabled (tabs as spaces)".to_string());
                 }
-            }
-            "autosave" | "auto_save" => {
-                match value.to_lowercase().as_str() {
-                    "true" | "1" => {
-                        app.config.set_auto_save(true)?;
-                        app.set_status_message("Auto-save enabled".to_string());
-                    }
-                    "false" | "0" => {
-                        app.config.set_auto_save(false)?;
-                        app.set_status_message("Auto-save disabled".to_string());
-                    }
-                    _ => return Err(anyhow::anyhow!("Invalid value for auto-save: {} (use true/false)", value)),
+                "false" | "0" => {
+                    app.config.set_insert_tabs(false)?;
+                    app.set_status_message("Expand tabs disabled (use actual tabs)".to_string());
                 }
-            }
-            "wrap" | "wrap_lines" => {
-                match value.to_lowercase().as_str() {
-                    "true" | "1" => {
-                        app.config.set_wrap_lines(true)?;
-                        app.set_status_message("Line wrapping enabled".to_string());
-                    }
-                    "false" | "0" => {
-                        app.config.set_wrap_lines(false)?;
-                        app.set_status_message("Line wrapping disabled".to_string());
-                    }
-                    _ => return Err(anyhow::anyhow!("Invalid value for line wrapping: {} (use true/false)", value)),
+                _ => {
+                    return Err(anyhow::anyhow!(
+                        "Invalid value for expand tabs: {} (use true/false)",
+                        value
+                    ))
                 }
-            }
-            "syntax" | "syntax_highlighting" => {
-                match value.to_lowercase().as_str() {
-                    "true" | "1" => {
-                        app.config.set_syntax_highlighting(true)?;
-                        app.set_status_message("Syntax highlighting enabled".to_string());
-                    }
-                    "false" | "0" => {
-                        app.config.set_syntax_highlighting(false)?;
-                        app.set_status_message("Syntax highlighting disabled".to_string());
-                    }
-                    _ => return Err(anyhow::anyhow!("Invalid value for syntax highlighting: {} (use true/false)", value)),
+            },
+            "autosave" | "auto_save" => match value.to_lowercase().as_str() {
+                "true" | "1" => {
+                    app.config.set_auto_save(true)?;
+                    app.set_status_message("Auto-save enabled".to_string());
                 }
-            }
-            "cursorblink" | "cursor_blink" => {
-                match value.to_lowercase().as_str() {
-                    "true" | "1" => {
-                        app.config.set_cursor_blink(true)?;
-                        app.set_status_message("Cursor blinking enabled".to_string());
-                    }
-                    "false" | "0" => {
-                        app.config.set_cursor_blink(false)?;
-                        app.set_status_message("Cursor blinking disabled".to_string());
-                    }
-                    _ => return Err(anyhow::anyhow!("Invalid value for cursor blink: {} (use true/false)", value)),
+                "false" | "0" => {
+                    app.config.set_auto_save(false)?;
+                    app.set_status_message("Auto-save disabled".to_string());
                 }
-            }
-            "statusline" | "show_status_line" => {
-                match value.to_lowercase().as_str() {
-                    "true" | "1" => {
-                        app.config.set_show_status_line(true)?;
-                        app.set_status_message("Status line enabled".to_string());
-                    }
-                    "false" | "0" => {
-                        app.config.set_show_status_line(false)?;
-                        app.set_status_message("Status line disabled".to_string());
-                    }
-                    _ => return Err(anyhow::anyhow!("Invalid value for status line: {} (use true/false)", value)),
+                _ => {
+                    return Err(anyhow::anyhow!(
+                        "Invalid value for auto-save: {} (use true/false)",
+                        value
+                    ))
                 }
-            }
-            "commandline" | "show_command_line" => {
-                match value.to_lowercase().as_str() {
-                    "true" | "1" => {
-                        app.config.set_show_command_line(true)?;
-                        app.set_status_message("Command line enabled".to_string());
-                    }
-                    "false" | "0" => {
-                        app.config.set_show_command_line(false)?;
-                        app.set_status_message("Command line disabled".to_string());
-                    }
-                    _ => return Err(anyhow::anyhow!("Invalid value for command line: {} (use true/false)", value)),
+            },
+            "wrap" | "wrap_lines" => match value.to_lowercase().as_str() {
+                "true" | "1" => {
+                    app.config.set_wrap_lines(true)?;
+                    app.set_status_message("Line wrapping enabled".to_string());
                 }
-            }
+                "false" | "0" => {
+                    app.config.set_wrap_lines(false)?;
+                    app.set_status_message("Line wrapping disabled".to_string());
+                }
+                _ => {
+                    return Err(anyhow::anyhow!(
+                        "Invalid value for line wrapping: {} (use true/false)",
+                        value
+                    ))
+                }
+            },
+            "syntax" | "syntax_highlighting" => match value.to_lowercase().as_str() {
+                "true" | "1" => {
+                    app.config.set_syntax_highlighting(true)?;
+                    app.set_status_message("Syntax highlighting enabled".to_string());
+                }
+                "false" | "0" => {
+                    app.config.set_syntax_highlighting(false)?;
+                    app.set_status_message("Syntax highlighting disabled".to_string());
+                }
+                _ => {
+                    return Err(anyhow::anyhow!(
+                        "Invalid value for syntax highlighting: {} (use true/false)",
+                        value
+                    ))
+                }
+            },
+            "cursorblink" | "cursor_blink" => match value.to_lowercase().as_str() {
+                "true" | "1" => {
+                    app.config.set_cursor_blink(true)?;
+                    app.set_status_message("Cursor blinking enabled".to_string());
+                }
+                "false" | "0" => {
+                    app.config.set_cursor_blink(false)?;
+                    app.set_status_message("Cursor blinking disabled".to_string());
+                }
+                _ => {
+                    return Err(anyhow::anyhow!(
+                        "Invalid value for cursor blink: {} (use true/false)",
+                        value
+                    ))
+                }
+            },
+            "statusline" | "show_status_line" => match value.to_lowercase().as_str() {
+                "true" | "1" => {
+                    app.config.set_show_status_line(true)?;
+                    app.set_status_message("Status line enabled".to_string());
+                }
+                "false" | "0" => {
+                    app.config.set_show_status_line(false)?;
+                    app.set_status_message("Status line disabled".to_string());
+                }
+                _ => {
+                    return Err(anyhow::anyhow!(
+                        "Invalid value for status line: {} (use true/false)",
+                        value
+                    ))
+                }
+            },
+            "commandline" | "show_command_line" => match value.to_lowercase().as_str() {
+                "true" | "1" => {
+                    app.config.set_show_command_line(true)?;
+                    app.set_status_message("Command line enabled".to_string());
+                }
+                "false" | "0" => {
+                    app.config.set_show_command_line(false)?;
+                    app.set_status_message("Command line disabled".to_string());
+                }
+                _ => {
+                    return Err(anyhow::anyhow!(
+                        "Invalid value for command line: {} (use true/false)",
+                        value
+                    ))
+                }
+            },
             "fastcl" | "fastcommandline" | "fast_command_line" => {
                 match value.to_lowercase().as_str() {
                     "true" | "1" => {
@@ -1509,7 +1641,12 @@ impl EventHandler {
                         app.config.set_fast_command_line(false)?;
                         app.set_status_message("Fast command line disabled".to_string());
                     }
-                    _ => return Err(anyhow::anyhow!("Invalid value for fast command line: {} (use true/false)", value)),
+                    _ => {
+                        return Err(anyhow::anyhow!(
+                            "Invalid value for fast command line: {} (use true/false)",
+                            value
+                        ))
+                    }
                 }
             }
             _ => {
@@ -1578,7 +1715,10 @@ impl EventHandler {
                 app.set_status_message("Fast command line disabled".to_string());
             }
             _ => {
-                return Err(anyhow::anyhow!("Unknown setting: {}. Use ':set' to see available options", flag));
+                return Err(anyhow::anyhow!(
+                    "Unknown setting: {}. Use ':set' to see available options",
+                    flag
+                ));
             }
         }
         Ok(())

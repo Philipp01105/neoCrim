@@ -257,7 +257,12 @@ impl Cursor {
 
     pub fn move_right_insert_mode(&mut self, buffer: &Buffer) {
         let line_len = buffer.line_len(self.line);
-        log::debug!("cursor position: {} {}, line len: {}", self.line, self.col, line_len);
+        log::debug!(
+            "cursor position: {} {}, line len: {}",
+            self.line,
+            self.col,
+            line_len
+        );
         if self.col < line_len {
             self.col += 1;
             self.desired_col = self.col;

@@ -40,12 +40,12 @@ impl Selection {
         let start = self.start;
         let end = self.end;
 
-        let (ordered_start, ordered_end) = if start.line < end.line 
-            || (start.line == end.line && start.col <= end.col) {
-            (start, end)
-        } else {
-            (end, start)
-        };
+        let (ordered_start, ordered_end) =
+            if start.line < end.line || (start.line == end.line && start.col <= end.col) {
+                (start, end)
+            } else {
+                (end, start)
+            };
 
         Some((ordered_start, ordered_end))
     }
@@ -55,7 +55,7 @@ impl Selection {
             if line < start.line || line > end.line {
                 return false;
             }
-            
+
             if line == start.line && line == end.line {
                 col >= start.col && col <= end.col
             } else if line == start.line {

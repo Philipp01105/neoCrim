@@ -1,8 +1,8 @@
-use serde::{Deserialize, Serialize};
-use std::path::{PathBuf};
-use crate::ui::{Theme, NeoTheme, ThemeManager};
+use crate::ui::{NeoTheme, Theme, ThemeManager};
 use crate::Result;
 use anyhow::Context;
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
@@ -48,67 +48,77 @@ impl Config {
     pub fn load() -> Result<Self> {
         if let Some(config_path) = Self::config_file_path() {
             if config_path.exists() {
-                let content = std::fs::read_to_string(&config_path)
-                    .with_context(|| format!("Failed to read config file: {}", config_path.display()))?;
-                
-                let mut config: Config = toml::from_str(&content)
-                    .with_context(|| "Failed to parse config file")?;
-               
+                let content = std::fs::read_to_string(&config_path).with_context(|| {
+                    format!("Failed to read config file: {}", config_path.display())
+                })?;
+
+                let mut config: Config =
+                    toml::from_str(&content).with_context(|| "Failed to parse config file")?;
+
                 config.theme_manager = ThemeManager::new();
-                
+
                 config.current_theme = if let Some(ref theme_path) = config.theme_path {
                     NeoTheme::load_from_file(theme_path).unwrap_or_else(|_| NeoTheme::default())
                 } else {
-                    config.theme_manager.get_theme_by_name(&config.ui.theme).unwrap_or_else(|_| NeoTheme::default())
+                    config
+                        .theme_manager
+                        .get_theme_by_name(&config.ui.theme)
+                        .unwrap_or_else(|_| NeoTheme::default())
                 };
-                
+
                 config.theme = config.current_theme.to_legacy_theme();
-                
+
                 return Ok(config);
             }
         }
-        
+
         Ok(Self::default())
     }
 
     pub fn set_theme<P: AsRef<std::path::Path>>(&mut self, theme_path: P) -> Result<()> {
         let theme_path = theme_path.as_ref();
-        
+
         let new_theme = NeoTheme::load_from_file(theme_path)
             .with_context(|| format!("Failed to load theme from: {}", theme_path.display()))?;
-        
+
         self.current_theme = new_theme;
         self.theme = self.current_theme.to_legacy_theme();
         self.theme_path = Some(theme_path.to_path_buf());
         self.ui.theme = "custom".to_string();
-        
+
         self.save()
             .with_context(|| "Failed to save config after setting theme")?;
-        
+
         Ok(())
     }
 
     pub fn set_theme_by_name(&mut self, theme_name: &str) -> Result<()> {
-        let new_theme = self.theme_manager.get_theme_by_name(theme_name)
+        let new_theme = self
+            .theme_manager
+            .get_theme_by_name(theme_name)
             .with_context(|| format!("Failed to load theme: {}", theme_name))?;
-        
+
         self.current_theme = new_theme;
         self.theme = self.current_theme.to_legacy_theme();
         self.ui.theme = theme_name.to_string();
-        self.theme_path = None; 
-        
+        self.theme_path = None;
+
         self.save()
             .with_context(|| "Failed to save config after setting theme")?;
-        
+
         Ok(())
     }
 
     pub fn set_theme_by_index(&mut self, index: usize) -> Result<()> {
         let theme_names = self.theme_manager.list_themes().clone();
         if index >= theme_names.len() {
-            return Err(anyhow::anyhow!("Theme index {} out of range (0-{})", index, theme_names.len() - 1));
+            return Err(anyhow::anyhow!(
+                "Theme index {} out of range (0-{})",
+                index,
+                theme_names.len() - 1
+            ));
         }
-        
+
         let theme_name = theme_names[index].clone();
         self.set_theme_by_name(&theme_name)
     }
@@ -138,15 +148,17 @@ impl Config {
     pub fn save(&self) -> Result<()> {
         if let Some(config_path) = Self::config_file_path() {
             if let Some(parent) = config_path.parent() {
-                std::fs::create_dir_all(parent)
-                    .with_context(|| format!("Failed to create config directory: {}", parent.display()))?;
+                std::fs::create_dir_all(parent).with_context(|| {
+                    format!("Failed to create config directory: {}", parent.display())
+                })?;
             }
 
-            let content = toml::to_string_pretty(self)
-                .with_context(|| "Failed to serialize config")?;
+            let content =
+                toml::to_string_pretty(self).with_context(|| "Failed to serialize config")?;
 
-            std::fs::write(&config_path, content)
-                .with_context(|| format!("Failed to write config file: {}", config_path.display()))?;
+            std::fs::write(&config_path, content).with_context(|| {
+                format!("Failed to write config file: {}", config_path.display())
+            })?;
         }
         Ok(())
     }
@@ -246,7 +258,10 @@ impl Config {
                 format!("line_numbers = {}", self.editor.line_numbers)
             }
             "relativelinenumbers" | "relative_line_numbers" | "rnu" | "relativenumber" => {
-                format!("relative_line_numbers = {}", self.editor.relative_line_numbers)
+                format!(
+                    "relative_line_numbers = {}",
+                    self.editor.relative_line_numbers
+                )
             }
             "tabsize" | "tab_size" | "ts" => {
                 format!("tab_size = {}", self.editor.tab_size)
@@ -281,7 +296,7 @@ impl Config {
             "fastcommandline" | "fast_command_line" | "fastcl" => {
                 format!("fast_command_line = {}", self.editor.fast_command_line)
             }
-            _ => format!("Unknown setting: {}", setting)
+            _ => format!("Unknown setting: {}", setting),
         }
     }
 
@@ -289,13 +304,19 @@ impl Config {
         vec![
             format!("Editor Settings:"),
             format!("  line_numbers = {}", self.editor.line_numbers),
-            format!("  relative_line_numbers = {}", self.editor.relative_line_numbers),
+            format!(
+                "  relative_line_numbers = {}",
+                self.editor.relative_line_numbers
+            ),
             format!("  tab_size = {}", self.editor.tab_size),
             format!("  insert_tabs = {}", self.editor.insert_tabs),
             format!("  auto_save = {}", self.editor.auto_save),
             format!("  wrap_lines = {}", self.editor.wrap_lines),
             format!("  scroll_offset = {}", self.editor.scroll_offset),
-            format!("  syntax_highlighting = {}", self.editor.syntax_highlighting),
+            format!(
+                "  syntax_highlighting = {}",
+                self.editor.syntax_highlighting
+            ),
             format!("  fast_command_line = {}", self.editor.fast_command_line),
             format!(""),
             format!("UI Settings:"),
@@ -310,9 +331,11 @@ impl Config {
 impl Default for Config {
     fn default() -> Self {
         let theme_manager = ThemeManager::new();
-        let current_theme = theme_manager.get_theme_by_name("dark").unwrap_or_else(|_| NeoTheme::default());
+        let current_theme = theme_manager
+            .get_theme_by_name("dark")
+            .unwrap_or_else(|_| NeoTheme::default());
         let legacy_theme = current_theme.to_legacy_theme();
-        
+
         Self {
             editor: EditorConfig {
                 line_numbers: true,

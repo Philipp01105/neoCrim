@@ -69,7 +69,7 @@ pub enum Command {
     SetShowStatusLine(bool),
     SetShowCommandLine(bool),
     SetFastcmd(bool),
-    
+
     // Get commands to show current settings
     ShowSettings,
     ShowSetting(String),
@@ -80,27 +80,41 @@ pub enum Command {
 
 impl Command {
     pub fn is_movement(&self) -> bool {
-        matches!(self, 
-            Command::MoveLeft | Command::MoveRight | Command::MoveUp | Command::MoveDown |
-            Command::MoveWordForward | Command::MoveWordBackward |
-            Command::MoveLineStart | Command::MoveLineEnd |
-            Command::MoveFileStart | Command::MoveFileEnd
+        matches!(
+            self,
+            Command::MoveLeft
+                | Command::MoveRight
+                | Command::MoveUp
+                | Command::MoveDown
+                | Command::MoveWordForward
+                | Command::MoveWordBackward
+                | Command::MoveLineStart
+                | Command::MoveLineEnd
+                | Command::MoveFileStart
+                | Command::MoveFileEnd
         )
     }
 
     pub fn is_edit(&self) -> bool {
-        matches!(self,
-            Command::InsertChar(_) | Command::InsertNewline |
-            Command::DeleteChar | Command::DeleteLine |
-            Command::OpenLineBelow | Command::OpenLineAbove
+        matches!(
+            self,
+            Command::InsertChar(_)
+                | Command::InsertNewline
+                | Command::DeleteChar
+                | Command::DeleteLine
+                | Command::OpenLineBelow
+                | Command::OpenLineAbove
         )
     }
 
     pub fn is_mode_change(&self) -> bool {
-        matches!(self,
-            Command::EnterNormalMode | Command::EnterInsertMode |
-            Command::EnterInsertModeAfter | Command::EnterVisualMode |
-            Command::EnterCommandMode
+        matches!(
+            self,
+            Command::EnterNormalMode
+                | Command::EnterInsertMode
+                | Command::EnterInsertModeAfter
+                | Command::EnterVisualMode
+                | Command::EnterCommandMode
         )
     }
 }

@@ -1,8 +1,8 @@
-use crate::editor::{Buffer, Clipboard, Cursor, Mode, Selection};
 use crate::config::Config;
-use crate::ui::components::FileExplorer;
+use crate::editor::{Buffer, Clipboard, Cursor, Mode, Selection};
+use crate::file::watcher::{FileEvent, FileWatcher};
 use crate::syntax::SyntaxHighlighter;
-use crate::file::watcher::{FileWatcher, FileEvent};
+use crate::ui::components::FileExplorer;
 use crate::Result;
 use std::path::PathBuf;
 use std::time::Instant;
@@ -40,7 +40,7 @@ pub struct HelpWindow {
 pub struct FileChangeDialog {
     pub visible: bool,
     pub changed_file: PathBuf,
-    pub selected_option: usize, 
+    pub selected_option: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -63,7 +63,7 @@ impl App {
         let config = Config::load()?;
         let file_explorer = FileExplorer::new(".")?;
         let syntax_highlighter = SyntaxHighlighter::new();
-        
+
         Ok(Self {
             should_quit: false,
             buffers: vec![Buffer::terminal()],
@@ -168,11 +168,11 @@ impl App {
             } else {
                 self.save_undo_state();
             }
-            
+
             let cursor_copy = self.cursor;
             let buffer = self.current_buffer_mut();
             buffer.insert_text_at_cursor(&cursor_copy, &text);
-            
+
             let lines: Vec<&str> = text.lines().collect();
             if lines.len() == 1 {
                 self.cursor.col += text.len();
@@ -203,7 +203,8 @@ impl App {
 
         if let Some((start, end)) = self.selection.get_range() {
             self.save_undo_state();
-            self.current_buffer_mut().delete_range(start.line, start.col, end.line, end.col);
+            self.current_buffer_mut()
+                .delete_range(start.line, start.col, end.line, end.col);
             self.cursor = start;
             self.clear_selection();
             true
@@ -219,7 +220,7 @@ impl App {
                 return;
             }
         }
-        
+
         let terminal_buffer = Buffer::terminal();
         self.buffers.push(terminal_buffer);
         self.current_buffer = self.buffers.len() - 1;
@@ -313,7 +314,8 @@ impl App {
     }
 
     pub fn search(&mut self, query: &str) {
-        self.search_state.search(query, &self.buffers[self.current_buffer]);
+        self.search_state
+            .search(query, &self.buffers[self.current_buffer]);
         if !self.search_state.results.is_empty() {
             self.search_state.goto_current_result(&mut self.cursor);
             self.set_status_message(format!("Found {} matches", self.search_state.results.len()));
@@ -325,18 +327,22 @@ impl App {
     pub fn search_next(&mut self) {
         if self.search_state.next() {
             self.search_state.goto_current_result(&mut self.cursor);
-            self.set_status_message(format!("Match {} of {}", 
-                self.search_state.current_result + 1, 
-                self.search_state.results.len()));
+            self.set_status_message(format!(
+                "Match {} of {}",
+                self.search_state.current_result + 1,
+                self.search_state.results.len()
+            ));
         }
     }
 
     pub fn search_previous(&mut self) {
         if self.search_state.previous() {
             self.search_state.goto_current_result(&mut self.cursor);
-            self.set_status_message(format!("Match {} of {}", 
-                self.search_state.current_result + 1, 
-                self.search_state.results.len()));
+            self.set_status_message(format!(
+                "Match {} of {}",
+                self.search_state.current_result + 1,
+                self.search_state.results.len()
+            ));
         }
     }
 
@@ -354,11 +360,16 @@ impl App {
             return;
         }
 
-        let line_number_width = if self.config.editor.line_numbers || self.config.editor.relative_line_numbers {
-            if self.config.editor.relative_line_numbers { 5 } else { 4 }
-        } else {
-            0
-        };
+        let line_number_width =
+            if self.config.editor.line_numbers || self.config.editor.relative_line_numbers {
+                if self.config.editor.relative_line_numbers {
+                    5
+                } else {
+                    4
+                }
+            } else {
+                0
+            };
 
         let content_width = viewport_width.saturating_sub(line_number_width);
         let scroll_margin = 5;
@@ -367,7 +378,9 @@ impl App {
             self.horizontal_scroll_offset = self.cursor.col;
         } else if self.cursor.col >= self.horizontal_scroll_offset + content_width {
             self.horizontal_scroll_offset = self.cursor.col - content_width + 1;
-        } else if self.cursor.col < self.horizontal_scroll_offset + scroll_margin && self.horizontal_scroll_offset > 0 {
+        } else if self.cursor.col < self.horizontal_scroll_offset + scroll_margin
+            && self.horizontal_scroll_offset > 0
+        {
             self.horizontal_scroll_offset = self.cursor.col.saturating_sub(scroll_margin);
         } else if self.cursor.col >= self.horizontal_scroll_offset + content_width - scroll_margin {
             self.horizontal_scroll_offset = self.cursor.col + scroll_margin - content_width + 1;
@@ -397,9 +410,9 @@ impl App {
     }
 
     pub fn has_buffer_for_file(&self, path: &std::path::Path) -> bool {
-        self.buffers.iter().any(|buffer| {
-            buffer.file_path() == Some(path)
-        })
+        self.buffers
+            .iter()
+            .any(|buffer| buffer.file_path() == Some(path))
     }
 
     pub fn handle_file_change_dialog_action(&mut self, accept_storage: bool) -> Result<()> {

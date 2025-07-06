@@ -1,10 +1,10 @@
-use ropey::Rope;
-use std::path::{Path, PathBuf};
-use crate::Result;
-use crate::ui::components::terminal::TerminalOutput;
 use crate::editor::{Cursor, Selection};
+use crate::ui::components::terminal::TerminalOutput;
+use crate::Result;
 use anyhow::Context;
+use ropey::Rope;
 use std::collections::VecDeque;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone)]
 pub enum BufferType {
@@ -61,7 +61,7 @@ impl Buffer {
         let path = path.as_ref();
         let content = std::fs::read_to_string(path)
             .with_context(|| format!("Failed to read file: {}", path.display()))?;
-        
+
         Ok(Self {
             content: Rope::from_str(&content),
             file_path: Some(path.to_path_buf()),
@@ -78,7 +78,7 @@ impl Buffer {
         Self {
             content: Rope::new(),
             file_path: Some(path.as_ref().to_path_buf()),
-            is_modified: true, 
+            is_modified: true,
             is_readonly: false,
             buffer_type: BufferType::File,
             terminal_output: None,
@@ -91,11 +91,12 @@ impl Buffer {
         if let Some(path) = &self.file_path {
             if let Some(parent) = path.parent() {
                 if !parent.exists() {
-                    std::fs::create_dir_all(parent)
-                        .with_context(|| format!("Failed to create directory: {}", parent.display()))?;
+                    std::fs::create_dir_all(parent).with_context(|| {
+                        format!("Failed to create directory: {}", parent.display())
+                    })?;
                 }
             }
-            
+
             let content = self.content.to_string();
             std::fs::write(path, content)
                 .with_context(|| format!("Failed to save file: {}", path.display()))?;
@@ -116,17 +117,27 @@ impl Buffer {
 
     pub fn insert_char(&mut self, line: usize, col: usize, ch: char) {
         if let Some(char_idx) = self.line_col_to_char_idx(line, col) {
-            log::debug!("insert_char: line={}, col={}, ch='{}' (U+{:04X}), char_idx={}", 
-                       line, col, ch.escape_debug(), ch as u32, char_idx);
+            log::debug!(
+                "insert_char: line={}, col={}, ch='{}' (U+{:04X}), char_idx={}",
+                line,
+                col,
+                ch.escape_debug(),
+                ch as u32,
+                char_idx
+            );
             self.content.insert_char(char_idx, ch);
             self.is_modified = true;
-            
+
             if let Some(line_content) = self.line(line) {
                 log::debug!("  line after insert: '{}'", line_content.escape_debug());
             }
         } else {
-            log::debug!("insert_char: FAILED line={}, col={}, ch='{}' - char_idx is None", 
-                       line, col, ch.escape_debug());
+            log::debug!(
+                "insert_char: FAILED line={}, col={}, ch='{}' - char_idx is None",
+                line,
+                col,
+                ch.escape_debug()
+            );
         }
     }
 
@@ -146,10 +157,16 @@ impl Buffer {
         }
     }
 
-    pub fn delete_range(&mut self, start_line: usize, start_col: usize, end_line: usize, end_col: usize) {
+    pub fn delete_range(
+        &mut self,
+        start_line: usize,
+        start_col: usize,
+        end_line: usize,
+        end_col: usize,
+    ) {
         if let (Some(start_idx), Some(end_idx)) = (
             self.line_col_to_char_idx(start_line, start_col),
-            self.line_col_to_char_idx(end_line, end_col)
+            self.line_col_to_char_idx(end_line, end_col),
         ) {
             if start_idx < end_idx && end_idx <= self.content.len_chars() {
                 self.content.remove(start_idx..end_idx);
@@ -166,7 +183,7 @@ impl Buffer {
         if let Some((start, end)) = selection.get_range() {
             let start_char = self.cursor_to_char_idx(&start);
             let end_char = self.cursor_to_char_idx(&end);
-            
+
             if start_char <= end_char && end_char <= self.content.len_chars() {
                 self.content.slice(start_char..end_char).to_string()
             } else {
@@ -181,7 +198,7 @@ impl Buffer {
         if let Some((start, end)) = selection.get_range() {
             let start_char = self.cursor_to_char_idx(&start);
             let end_char = self.cursor_to_char_idx(&end);
-            
+
             if start_char <= end_char && end_char <= self.content.len_chars() {
                 let deleted_text = self.content.slice(start_char..end_char).to_string();
                 self.content.remove(start_char..end_char);
@@ -204,15 +221,15 @@ impl Buffer {
         if self.content.len_lines() == 0 {
             return 0;
         }
-        
+
         if cursor.line >= self.line_count() {
             return self.content.len_chars();
         }
-        
+
         let line_start = self.content.line_to_char(cursor.line);
         let line_content = self.content.line(cursor.line);
         let line_len = line_content.len_chars();
-        
+
         if line_len == 0 {
             line_start
         } else {
@@ -223,18 +240,23 @@ impl Buffer {
     pub fn line(&self, line_idx: usize) -> Option<String> {
         if line_idx < self.content.len_lines() {
             let line_content = self.content.line(line_idx).to_string();
-            
+
             let trimmed = if line_content.ends_with('\n') {
                 &line_content[..line_content.len() - 1]
             } else {
                 &line_content
             };
-            
+
             let is_last_line = line_idx == self.content.len_lines() - 1;
-            
-            log::debug!("line({}): raw='{}', trimmed='{}', is_last_line={}", 
-                       line_idx, line_content.escape_debug(), trimmed.escape_debug(), is_last_line);
-            
+
+            log::debug!(
+                "line({}): raw='{}', trimmed='{}', is_last_line={}",
+                line_idx,
+                line_content.escape_debug(),
+                trimmed.escape_debug(),
+                is_last_line
+            );
+
             Some(trimmed.to_string())
         } else {
             None
@@ -247,23 +269,28 @@ impl Buffer {
             let raw_len = line_slice.len_chars();
             let line_str = line_slice.to_string();
             let is_last_line = line_idx == self.content.len_lines() - 1;
-            
+
             let has_newline = line_str.ends_with('\n');
             let calculated_len = if has_newline {
                 raw_len.saturating_sub(1)
             } else {
                 raw_len
             };
-            
-            log::debug!("line_len({}): raw_len={}, has_newline={}, calculated_len={}, is_last_line={}", 
-                       line_idx, raw_len, has_newline, calculated_len, is_last_line);
-            
+
+            log::debug!(
+                "line_len({}): raw_len={}, has_newline={}, calculated_len={}, is_last_line={}",
+                line_idx,
+                raw_len,
+                has_newline,
+                calculated_len,
+                is_last_line
+            );
+
             calculated_len
         } else {
             0
         }
     }
-
 
     pub fn is_empty(&self) -> bool {
         self.content.len_chars() == 0
@@ -276,7 +303,8 @@ impl Buffer {
     pub fn file_name(&self) -> Option<String> {
         match self.buffer_type {
             BufferType::Terminal => Some("[Terminal]".to_string()),
-            BufferType::File => self.file_path
+            BufferType::File => self
+                .file_path
                 .as_ref()
                 .and_then(|path| path.file_name())
                 .and_then(|name| name.to_str())
@@ -289,10 +317,10 @@ impl Buffer {
             if path.exists() {
                 let content_str = std::fs::read_to_string(path)
                     .with_context(|| format!("Failed to read file: {}", path.display()))?;
-                
+
                 self.content = Rope::from_str(&content_str);
                 self.is_modified = false;
-                
+
                 log::info!("Reloaded file from disk: {}", path.display());
             } else {
                 return Err(anyhow::anyhow!("File no longer exists: {}", path.display()));
@@ -353,14 +381,20 @@ impl Buffer {
         if line >= self.content.len_lines() {
             return None;
         }
-        
+
         let line_start = self.content.line_to_char(line);
         let line_len = self.line_len(line);
         let is_last_line = line == self.content.len_lines() - 1;
-        
-        log::debug!("line_col_to_char_idx: line={}, col={}, line_start={}, line_len={}, is_last_line={}", 
-                   line, col, line_start, line_len, is_last_line);
-        
+
+        log::debug!(
+            "line_col_to_char_idx: line={}, col={}, line_start={}, line_len={}, is_last_line={}",
+            line,
+            col,
+            line_start,
+            line_len,
+            is_last_line
+        );
+
         if col <= line_len {
             let result = line_start + col;
             log::debug!("  -> char_idx={}", result);
@@ -378,13 +412,13 @@ impl Buffer {
             content: self.content.clone(),
             cursor: cursor.clone(),
         };
-        
+
         self.undo_stack.push_back(undo_state);
 
         if self.undo_stack.len() > MAX_UNDO_STATES {
             self.undo_stack.pop_front();
         }
-        
+
         self.redo_stack.clear();
     }
 
@@ -392,10 +426,10 @@ impl Buffer {
         if let Some(undo_state) = self.undo_stack.pop_back() {
             let current_state = UndoState {
                 content: self.content.clone(),
-                cursor: undo_state.cursor.clone(), 
+                cursor: undo_state.cursor.clone(),
             };
             self.redo_stack.push_back(current_state);
-            
+
             self.content = undo_state.content;
             self.is_modified = true;
 
@@ -409,10 +443,10 @@ impl Buffer {
         if let Some(redo_state) = self.redo_stack.pop_back() {
             let current_state = UndoState {
                 content: self.content.clone(),
-                cursor: redo_state.cursor.clone(), 
+                cursor: redo_state.cursor.clone(),
             };
             self.undo_stack.push_back(current_state);
-            
+
             self.content = redo_state.content;
             self.is_modified = true;
 
