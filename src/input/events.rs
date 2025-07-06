@@ -506,6 +506,7 @@ impl EventHandler {
                     } else {
                         app.set_status_message(format!("Opened: {}", file_path.display()));
                         app.file_explorer.toggle_visibility();
+                        app.mode = Mode::Normal;
                     }
                 }
             }
@@ -1103,16 +1104,6 @@ impl EventHandler {
                 if c as u8 == 22 {
                     log::debug!("Ctrl+V (ASCII 22) detected in command mode, ignoring");
                     return Ok(());
-                }
-
-                if key_event.modifiers == KeyModifiers::NONE {
-                    match c {
-                        '\\' | 'p' => {
-                            log::debug!("Rejecting character '{}' with no modifiers in command mode - likely escape sequence artifact", c);
-                            return Ok(());
-                        }
-                        _ => {}
-                    }
                 }
 
                 log::debug!(

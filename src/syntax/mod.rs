@@ -30,32 +30,6 @@ impl SyntaxHighlighter {
         None
     }
 
-    pub fn get_language_by_extension(&self, extension: &str) -> Option<&SyntaxReference> {
-        match extension.to_lowercase().as_str() {
-            "rs" => self.syntax_set.find_syntax_by_extension("rs"),
-            "c" => self.syntax_set.find_syntax_by_extension("c"),
-            "cpp" | "cc" | "cxx" | "hpp" | "h" => self.syntax_set.find_syntax_by_extension("cpp"),
-            "java" => self.syntax_set.find_syntax_by_extension("java"),
-            "cs" => self.syntax_set.find_syntax_by_extension("cs"),
-            "py" => self.syntax_set.find_syntax_by_extension("py"),
-            "js" | "mjs" => self.syntax_set.find_syntax_by_extension("js"),
-            "ts" => self.syntax_set.find_syntax_by_extension("ts"),
-            "html" | "htm" => self.syntax_set.find_syntax_by_extension("html"),
-            "css" => self.syntax_set.find_syntax_by_extension("css"),
-            "json" => self.syntax_set.find_syntax_by_extension("json"),
-            "xml" => self.syntax_set.find_syntax_by_extension("xml"),
-            "yaml" | "yml" => self.syntax_set.find_syntax_by_extension("yaml"),
-            "lua" => self.syntax_set.find_syntax_by_extension("lua"),
-            "go" => self.syntax_set.find_syntax_by_extension("go"),
-            "php" => self.syntax_set.find_syntax_by_extension("php"),
-            "rb" => self.syntax_set.find_syntax_by_extension("rb"),
-            "sh" | "bash" => self.syntax_set.find_syntax_by_extension("sh"),
-            "sql" => self.syntax_set.find_syntax_by_extension("sql"),
-            "md" => self.syntax_set.find_syntax_by_extension("md"),
-            _ => None,
-        }
-    }
-
     pub fn highlight_line(
         &self,
         line: &str,
@@ -126,7 +100,6 @@ impl SyntaxHighlighter {
             ("Ruby", vec!["rb"]),
             ("Shell", vec!["sh", "bash"]),
             ("SQL", vec!["sql"]),
-            ("Markdown", vec!["md"]),
         ]
     }
 }

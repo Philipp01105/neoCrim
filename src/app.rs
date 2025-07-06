@@ -94,6 +94,8 @@ impl App {
                 log::warn!("Failed to watch file {:?}: {}", path, e);
             }
         }
+        self.cursor.col = 0;
+        self.cursor.line = 0;
         self.buffers.push(buffer);
         self.current_buffer = self.buffers.len() - 1;
         Ok(())

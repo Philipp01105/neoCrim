@@ -41,19 +41,12 @@ impl Renderer {
     pub fn render(&self, frame: &mut Frame, app: &mut App) {
         let size = frame.size();
 
-        let main_chunks = if app.file_explorer.visible {
-            Layout::default()
+        if app.file_explorer.visible {
+            let main_chunks = Layout::default()
                 .direction(Direction::Horizontal)
                 .constraints([Constraint::Length(30), Constraint::Min(10)].as_ref())
-                .split(size)
-        } else {
-            Layout::default()
-                .direction(Direction::Horizontal)
-                .constraints([Constraint::Percentage(100)].as_ref())
-                .split(size)
-        };
+                .split(size);
 
-        if app.file_explorer.visible {
             app.file_explorer.render(frame, main_chunks[0], &self.theme);
 
             let command_line_height = if app.config.ui.show_command_line {
@@ -115,7 +108,7 @@ impl Renderer {
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints(constraints)
-                .split(main_chunks[0]);
+                .split(size);
 
             self.render_editor(frame, app, chunks[0]);
 
