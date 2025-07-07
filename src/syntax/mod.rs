@@ -78,30 +78,6 @@ impl SyntaxHighlighter {
 
         result
     }
-
-    pub fn get_supported_languages(&self) -> Vec<(&str, Vec<&str>)> {
-        vec![
-            ("Rust", vec!["rs"]),
-            ("C", vec!["c", "h"]),
-            ("C++", vec!["cpp", "cc", "cxx", "hpp"]),
-            ("Java", vec!["java"]),
-            ("C#", vec!["cs"]),
-            ("Python", vec!["py", "pyw"]),
-            ("JavaScript", vec!["js", "mjs"]),
-            ("TypeScript", vec!["ts"]),
-            ("HTML", vec!["html", "htm"]),
-            ("CSS", vec!["css"]),
-            ("JSON", vec!["json"]),
-            ("XML", vec!["xml"]),
-            ("YAML", vec!["yaml", "yml"]),
-            ("Lua", vec!["lua"]),
-            ("Go", vec!["go"]),
-            ("PHP", vec!["php"]),
-            ("Ruby", vec!["rb"]),
-            ("Shell", vec!["sh", "bash"]),
-            ("SQL", vec!["sql"]),
-        ]
-    }
 }
 
 impl Default for SyntaxHighlighter {

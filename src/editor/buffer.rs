@@ -252,7 +252,7 @@ impl Buffer {
             log::debug!(
                 "line({}): raw='{}', trimmed='{}', is_last_line={}",
                 line_idx,
-                line_content.escape_debug(),
+                line_content[..50].escape_debug(),
                 trimmed.escape_debug(),
                 is_last_line
             );

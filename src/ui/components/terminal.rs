@@ -1,7 +1,3 @@
-use ratatui::{
-    prelude::*,
-    widgets::{Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap},
-};
 use std::io::{BufRead, BufReader};
 use std::process::{Command, Stdio};
 
@@ -187,99 +183,6 @@ impl Terminal {
             output: TerminalOutput::new(),
             visible: false,
             title: "Terminal".to_string(),
-        }
-    }
-
-    pub fn show(&mut self) {
-        self.visible = true;
-    }
-
-    pub fn hide(&mut self) {
-        self.visible = false;
-    }
-
-    pub fn toggle(&mut self) {
-        self.visible = !self.visible;
-    }
-
-    pub fn render(&mut self, area: Rect, buf: &mut Buffer, theme: &crate::ui::theme::Theme) {
-        if !self.visible {
-            return;
-        }
-
-        let block = Block::default()
-            .title(self.title.as_str())
-            .borders(Borders::ALL)
-            .border_style(theme.terminal_border)
-            .title_style(theme.terminal_title);
-
-        let inner_area = block.inner(area);
-        block.render(area, buf);
-
-        let viewport_height = inner_area.height as usize;
-        let total_lines = self.output.lines.len();
-        let scroll_offset = if total_lines <= viewport_height {
-            0
-        } else {
-            if self.output.scroll_offset == 0 {
-                total_lines.saturating_sub(viewport_height)
-            } else {
-                self.output
-                    .scroll_offset
-                    .min(total_lines.saturating_sub(viewport_height))
-            }
-        };
-
-        let visible_lines: Vec<Line> = self
-            .output
-            .lines
-            .iter()
-            .skip(scroll_offset)
-            .take(viewport_height)
-            .map(|line| {
-                let style = if line.starts_with("$ ") {
-                    theme.terminal_command
-                } else if line.starts_with("ERROR:") {
-                    theme.terminal_error
-                } else {
-                    theme.terminal_output
-                };
-                Line::from(Span::styled(line.clone(), style))
-            })
-            .collect();
-
-        let paragraph = Paragraph::new(visible_lines)
-            .style(theme.terminal_background)
-            .wrap(Wrap { trim: false });
-
-        paragraph.render(inner_area, buf);
-
-        if total_lines > viewport_height {
-            let scrollbar_area = Rect {
-                x: area.x + area.width - 1,
-                y: area.y + 1,
-                width: 1,
-                height: area.height - 2,
-            };
-
-            let mut scrollbar_state = ScrollbarState::new(total_lines).position(scroll_offset);
-
-            let scrollbar = Scrollbar::default()
-                .orientation(ScrollbarOrientation::VerticalRight)
-                .style(theme.scrollbar);
-
-            scrollbar.render(scrollbar_area, buf, &mut scrollbar_state);
-        }
-
-        if self.output.is_running {
-            let status_area = Rect {
-                x: area.x + 2,
-                y: area.y,
-                width: 12,
-                height: 1,
-            };
-            let status = Paragraph::new("[Running...]").style(theme.terminal_running);
-            status.render(status_area, buf);
         }
     }
 }

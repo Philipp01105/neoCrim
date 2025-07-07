@@ -28,11 +28,6 @@ impl Renderer {
             glass_effects_enabled: neo_theme.colors.enable_glass,
         }
     }
-
-    pub fn update_theme(&mut self, theme: Theme) {
-        self.theme = theme;
-    }
-
     pub fn update_theme_with_effects(&mut self, theme: Theme, neo_theme: &NeoTheme) {
         self.theme = theme;
         self.glass_effects_enabled = neo_theme.colors.enable_glass;

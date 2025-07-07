@@ -89,12 +89,6 @@ impl ThemeManager {
         self.theme_names.len()
     }
 
-    pub fn get_theme_index(&self, name: &str) -> Option<usize> {
-        self.theme_names
-            .iter()
-            .position(|theme_name| theme_name == name)
-    }
-
     pub fn get_theme_info(&self, name: &str) -> Result<(String, String, String)> {
         let theme = self.get_theme_by_name(name)?;
         Ok((theme.name, theme.author, theme.description))
