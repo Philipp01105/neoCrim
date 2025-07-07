@@ -1,5 +1,5 @@
-use std::sync::{Arc, Mutex};
 use arboard::Clipboard as SystemClipboard;
+use std::sync::{Arc, Mutex};
 
 lazy_static::lazy_static! {
     static ref INTERNAL_CLIPBOARD: Arc<Mutex<String>> = Arc::new(Mutex::new(String::new()));
@@ -26,7 +26,7 @@ impl Clipboard {
                 return text;
             }
         }
-        
+
         Self::get_internal_text()
     }
 

@@ -10,7 +10,7 @@ impl Mode {
     pub fn name(&self) -> &'static str {
         match self {
             Mode::Normal => "NORMAL",
-            Mode::Insert => "INSERT", 
+            Mode::Insert => "INSERT",
             Mode::Visual => "VISUAL",
             Mode::Command => "COMMAND",
         }

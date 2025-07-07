@@ -1,6 +1,6 @@
+use crate::input::Command;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use std::collections::HashMap;
-use crate::input::Command;
 
 #[derive(Debug, Clone)]
 pub struct KeyBindings {
@@ -24,32 +24,95 @@ impl KeyBindings {
     }
 
     fn setup_default_bindings(&mut self) {
-        self.bind_normal(KeyEvent::new(KeyCode::Char('h'), KeyModifiers::NONE), Command::MoveLeft);
-        self.bind_normal(KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE), Command::MoveDown);
-        self.bind_normal(KeyEvent::new(KeyCode::Char('k'), KeyModifiers::NONE), Command::MoveUp);
-        self.bind_normal(KeyEvent::new(KeyCode::Char('l'), KeyModifiers::NONE), Command::MoveRight);
-        self.bind_normal(KeyEvent::new(KeyCode::Char('w'), KeyModifiers::NONE), Command::MoveWordForward);
-        self.bind_normal(KeyEvent::new(KeyCode::Char('b'), KeyModifiers::NONE), Command::MoveWordBackward);
-        self.bind_normal(KeyEvent::new(KeyCode::Char('0'), KeyModifiers::NONE), Command::MoveLineStart);
-        self.bind_normal(KeyEvent::new(KeyCode::Char('$'), KeyModifiers::NONE), Command::MoveLineEnd);
-        self.bind_normal(KeyEvent::new(KeyCode::Char('g'), KeyModifiers::NONE), Command::MoveFileStart);
-        self.bind_normal(KeyEvent::new(KeyCode::Char('G'), KeyModifiers::NONE), Command::MoveFileEnd);
+        self.bind_normal(
+            KeyEvent::new(KeyCode::Char('h'), KeyModifiers::NONE),
+            Command::MoveLeft,
+        );
+        self.bind_normal(
+            KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE),
+            Command::MoveDown,
+        );
+        self.bind_normal(
+            KeyEvent::new(KeyCode::Char('k'), KeyModifiers::NONE),
+            Command::MoveUp,
+        );
+        self.bind_normal(
+            KeyEvent::new(KeyCode::Char('l'), KeyModifiers::NONE),
+            Command::MoveRight,
+        );
+        self.bind_normal(
+            KeyEvent::new(KeyCode::Char('w'), KeyModifiers::NONE),
+            Command::MoveWordForward,
+        );
+        self.bind_normal(
+            KeyEvent::new(KeyCode::Char('b'), KeyModifiers::NONE),
+            Command::MoveWordBackward,
+        );
+        self.bind_normal(
+            KeyEvent::new(KeyCode::Char('0'), KeyModifiers::NONE),
+            Command::MoveLineStart,
+        );
+        self.bind_normal(
+            KeyEvent::new(KeyCode::Char('$'), KeyModifiers::NONE),
+            Command::MoveLineEnd,
+        );
+        self.bind_normal(
+            KeyEvent::new(KeyCode::Char('g'), KeyModifiers::NONE),
+            Command::MoveFileStart,
+        );
+        self.bind_normal(
+            KeyEvent::new(KeyCode::Char('G'), KeyModifiers::NONE),
+            Command::MoveFileEnd,
+        );
 
-        self.bind_normal(KeyEvent::new(KeyCode::Char('i'), KeyModifiers::NONE), Command::EnterInsertMode);
-        self.bind_normal(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE), Command::EnterInsertModeAfter);
-        self.bind_normal(KeyEvent::new(KeyCode::Char('o'), KeyModifiers::NONE), Command::OpenLineBelow);
-        self.bind_normal(KeyEvent::new(KeyCode::Char('v'), KeyModifiers::NONE), Command::EnterVisualMode);
-        self.bind_normal(KeyEvent::new(KeyCode::Char(':'), KeyModifiers::NONE), Command::EnterCommandMode);
+        self.bind_normal(
+            KeyEvent::new(KeyCode::Char('i'), KeyModifiers::NONE),
+            Command::EnterInsertMode,
+        );
+        self.bind_normal(
+            KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE),
+            Command::EnterInsertModeAfter,
+        );
+        self.bind_normal(
+            KeyEvent::new(KeyCode::Char('o'), KeyModifiers::NONE),
+            Command::OpenLineBelow,
+        );
+        self.bind_normal(
+            KeyEvent::new(KeyCode::Char('v'), KeyModifiers::NONE),
+            Command::EnterVisualMode,
+        );
+        self.bind_normal(
+            KeyEvent::new(KeyCode::Char(':'), KeyModifiers::NONE),
+            Command::EnterCommandMode,
+        );
 
-        self.bind_normal(KeyEvent::new(KeyCode::Char('x'), KeyModifiers::NONE), Command::DeleteChar);
-        self.bind_normal(KeyEvent::new(KeyCode::Char('d'), KeyModifiers::NONE), Command::DeleteLine);
+        self.bind_normal(
+            KeyEvent::new(KeyCode::Char('x'), KeyModifiers::NONE),
+            Command::DeleteChar,
+        );
+        self.bind_normal(
+            KeyEvent::new(KeyCode::Char('d'), KeyModifiers::NONE),
+            Command::DeleteLine,
+        );
 
-        self.bind_insert(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE), Command::EnterNormalMode);
+        self.bind_insert(
+            KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE),
+            Command::EnterNormalMode,
+        );
 
-        self.bind_visual(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE), Command::EnterNormalMode);
+        self.bind_visual(
+            KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE),
+            Command::EnterNormalMode,
+        );
 
-        self.bind_command(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE), Command::EnterNormalMode);
-        self.bind_command(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE), Command::ExecuteCommand);
+        self.bind_command(
+            KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE),
+            Command::EnterNormalMode,
+        );
+        self.bind_command(
+            KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE),
+            Command::ExecuteCommand,
+        );
     }
 
     pub fn bind_normal(&mut self, key: KeyEvent, command: Command) {

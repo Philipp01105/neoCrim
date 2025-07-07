@@ -1,6 +1,6 @@
 use ratatui::style::{Color, Style as RatatuiStyle};
 use std::path::Path;
-use syntect::highlighting::{ThemeSet};
+use syntect::highlighting::ThemeSet;
 use syntect::parsing::{SyntaxReference, SyntaxSet};
 
 pub struct SyntaxHighlighter {
@@ -21,51 +21,31 @@ impl SyntaxHighlighter {
             if let Some(extension) = path.extension().and_then(|ext| ext.to_str()) {
                 return self.syntax_set.find_syntax_by_extension(extension);
             }
-            
+
             if let Some(filename) = path.file_name().and_then(|name| name.to_str()) {
                 return self.syntax_set.find_syntax_by_name(filename);
             }
         }
-        
+
         None
     }
 
-    pub fn get_language_by_extension(&self, extension: &str) -> Option<&SyntaxReference> {
-        match extension.to_lowercase().as_str() {
-            "rs" => self.syntax_set.find_syntax_by_extension("rs"),
-            "c" => self.syntax_set.find_syntax_by_extension("c"),
-            "cpp" | "cc" | "cxx" | "hpp" | "h" => self.syntax_set.find_syntax_by_extension("cpp"),
-            "java" => self.syntax_set.find_syntax_by_extension("java"),
-            "cs" => self.syntax_set.find_syntax_by_extension("cs"),
-            "py" => self.syntax_set.find_syntax_by_extension("py"),
-            "js" | "mjs" => self.syntax_set.find_syntax_by_extension("js"),
-            "ts" => self.syntax_set.find_syntax_by_extension("ts"),
-            "html" | "htm" => self.syntax_set.find_syntax_by_extension("html"),
-            "css" => self.syntax_set.find_syntax_by_extension("css"),
-            "json" => self.syntax_set.find_syntax_by_extension("json"),
-            "xml" => self.syntax_set.find_syntax_by_extension("xml"),
-            "yaml" | "yml" => self.syntax_set.find_syntax_by_extension("yaml"),
-            "lua" => self.syntax_set.find_syntax_by_extension("lua"),
-            "go" => self.syntax_set.find_syntax_by_extension("go"),
-            "php" => self.syntax_set.find_syntax_by_extension("php"),
-            "rb" => self.syntax_set.find_syntax_by_extension("rb"),
-            "sh" | "bash" => self.syntax_set.find_syntax_by_extension("sh"),
-            "sql" => self.syntax_set.find_syntax_by_extension("sql"),
-            "md" => self.syntax_set.find_syntax_by_extension("md"),
-            _ => None,
-        }
-    }
-
-    pub fn highlight_line(&self, line: &str, syntax: &SyntaxReference, theme_colors: &crate::ui::themes::ThemeColors) -> Vec<(RatatuiStyle, String)> {
+    pub fn highlight_line(
+        &self,
+        line: &str,
+        syntax: &SyntaxReference,
+        theme_colors: &crate::ui::themes::ThemeColors,
+    ) -> Vec<(RatatuiStyle, String)> {
         use syntect::parsing::ParseState;
         let mut parse_state = ParseState::new(syntax);
-        let ops = parse_state.parse_line(line, &self.syntax_set)
+        let ops = parse_state
+            .parse_line(line, &self.syntax_set)
             .unwrap_or_default();
-        
+
         let mut result = Vec::new();
         let mut current_pos = 0;
         let mut scope_stack = syntect::parsing::ScopeStack::new();
-        
+
         for (pos, op) in ops {
             if pos > current_pos {
                 let text = &line[current_pos..pos];
@@ -75,12 +55,11 @@ impl SyntaxHighlighter {
                     result.push((style, text.to_string()));
                 }
             }
-            
+
             scope_stack.apply(&op).unwrap_or(());
             current_pos = pos;
         }
-        
-       
+
         if current_pos < line.len() {
             let text = &line[current_pos..];
             if !text.is_empty() {
@@ -89,14 +68,14 @@ impl SyntaxHighlighter {
                 result.push((style, text.to_string()));
             }
         }
-        
+
         if result.is_empty() && !line.is_empty() {
             result.push((
                 RatatuiStyle::default().fg(theme_colors.foreground.to_ratatui_color()),
-                line.to_string()
+                line.to_string(),
             ));
         }
-        
+
         result
     }
 
@@ -121,7 +100,6 @@ impl SyntaxHighlighter {
             ("Ruby", vec!["rb"]),
             ("Shell", vec!["sh", "bash"]),
             ("SQL", vec!["sql"]),
-            ("Markdown", vec!["md"]),
         ]
     }
 }
@@ -132,9 +110,12 @@ impl Default for SyntaxHighlighter {
     }
 }
 
-fn scope_to_theme_color(scope_stack: &syntect::parsing::ScopeStack, theme_colors: &crate::ui::themes::ThemeColors) -> Color {
+fn scope_to_theme_color(
+    scope_stack: &syntect::parsing::ScopeStack,
+    theme_colors: &crate::ui::themes::ThemeColors,
+) -> Color {
     let scope_str = scope_stack.to_string();
-    
+
     if scope_str.contains("keyword") {
         theme_colors.syntax_keyword.to_ratatui_color()
     } else if scope_str.contains("string") {

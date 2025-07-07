@@ -1,17 +1,17 @@
 pub mod app;
-pub mod editor;
-pub mod ui;
-pub mod input;
-pub mod file;
 pub mod config;
-pub mod utils;
+pub mod editor;
+pub mod file;
+pub mod input;
 pub mod syntax;
+pub mod ui;
+pub mod utils;
 
 pub use app::App;
-pub use editor::*;
-pub use ui::*;
-pub use input::*;
-pub use file::*;
 pub use config::*;
+pub use editor::*;
+pub use file::*;
+pub use input::*;
+pub use ui::*;
 
 pub type Result<T> = anyhow::Result<T>;

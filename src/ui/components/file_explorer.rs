@@ -1,3 +1,6 @@
+use crate::ui::Theme;
+use crate::Result;
+use anyhow::Context;
 use ratatui::{
     layout::Rect,
     style::{Color, Modifier, Style},
@@ -7,9 +10,6 @@ use ratatui::{
 };
 use std::fs;
 use std::path::{Path, PathBuf};
-use crate::ui::Theme;
-use crate::Result;
-use anyhow::Context;
 
 pub struct FileExplorer {
     pub current_dir: PathBuf,
@@ -29,8 +29,12 @@ pub struct FileEntry {
 
 impl FileExplorer {
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let current_dir = std::fs::canonicalize(path.as_ref())
-            .with_context(|| format!("Failed to get absolute path for: {}", path.as_ref().display()))?;
+        let current_dir = std::fs::canonicalize(path.as_ref()).with_context(|| {
+            format!(
+                "Failed to get absolute path for: {}",
+                path.as_ref().display()
+            )
+        })?;
 
         let mut explorer = Self {
             current_dir,
@@ -50,16 +54,21 @@ impl FileExplorer {
             let parent_path = parent.to_path_buf();
 
             if !parent_path.exists() {
-                return Err(anyhow::anyhow!("Parent directory does not exist: {}", parent_path.display()));
+                return Err(anyhow::anyhow!(
+                    "Parent directory does not exist: {}",
+                    parent_path.display()
+                ));
             }
 
             if !parent_path.is_dir() {
-                return Err(anyhow::anyhow!("Parent is not a directory: {}", parent_path.display()));
+                return Err(anyhow::anyhow!(
+                    "Parent is not a directory: {}",
+                    parent_path.display()
+                ));
             }
 
             match std::fs::read_dir(&parent_path) {
-                Ok(_) => {
-                }
+                Ok(_) => {}
                 Err(e) => {
                     return Err(anyhow::anyhow!("Cannot read parent directory: {}", e));
                 }
@@ -100,23 +109,31 @@ impl FileExplorer {
         }
     }
 
-
     pub fn refresh(&mut self) -> Result<()> {
         self.entries.clear();
 
         if !self.current_dir.exists() {
-            return Err(anyhow::anyhow!("Directory does not exist: {}", self.current_dir.display()));
+            return Err(anyhow::anyhow!(
+                "Directory does not exist: {}",
+                self.current_dir.display()
+            ));
         }
 
         if !self.current_dir.is_dir() {
-            return Err(anyhow::anyhow!("Path is not a directory: {}", self.current_dir.display()));
+            return Err(anyhow::anyhow!(
+                "Path is not a directory: {}",
+                self.current_dir.display()
+            ));
         }
 
         let entries = match fs::read_dir(&self.current_dir) {
             Ok(entries) => entries,
             Err(e) => {
-                return Err(anyhow::anyhow!("Cannot read directory '{}': {}",
-                    self.current_dir.display(), e));
+                return Err(anyhow::anyhow!(
+                    "Cannot read directory '{}': {}",
+                    self.current_dir.display(),
+                    e
+                ));
             }
         };
 
@@ -138,12 +155,10 @@ impl FileExplorer {
             }
         }
 
-        file_entries.sort_by(|a, b| {
-            match (a.is_directory, b.is_directory) {
-                (true, false) => std::cmp::Ordering::Less,
-                (false, true) => std::cmp::Ordering::Greater,
-                _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
-            }
+        file_entries.sort_by(|a, b| match (a.is_directory, b.is_directory) {
+            (true, false) => std::cmp::Ordering::Less,
+            (false, true) => std::cmp::Ordering::Greater,
+            _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
         });
 
         self.entries = file_entries;
@@ -151,7 +166,6 @@ impl FileExplorer {
         self.safe_reset_selection();
         Ok(())
     }
-
 
     fn safe_reset_selection(&mut self) {
         if !self.entries.is_empty() {
@@ -218,7 +232,10 @@ impl FileExplorer {
         let target_path = path.as_ref();
 
         if !target_path.exists() {
-            return Err(anyhow::anyhow!("Path does not exist: {}", target_path.display()));
+            return Err(anyhow::anyhow!(
+                "Path does not exist: {}",
+                target_path.display()
+            ));
         }
 
         let target_dir = if target_path.is_dir() {
@@ -288,7 +305,8 @@ impl FileExplorer {
             return;
         }
 
-        let items: Vec<ListItem> = self.entries
+        let items: Vec<ListItem> = self
+            .entries
             .iter()
             .map(|entry| {
                 let icon = if entry.is_directory {
@@ -313,9 +331,7 @@ impl FileExplorer {
                         .fg(Color::Cyan)
                         .add_modifier(Modifier::BOLD)
                 } else if entry.is_hidden {
-                    Style::default()
-                        .fg(Color::Gray)
-                        .add_modifier(Modifier::DIM)
+                    Style::default().fg(Color::Gray).add_modifier(Modifier::DIM)
                 } else {
                     Style::default().fg(theme.foreground)
                 };
@@ -327,7 +343,11 @@ impl FileExplorer {
             })
             .collect();
 
-        let parent_indicator = if self.can_go_to_parent() { " (h: ���️ parent)" } else { "" };
+        let parent_indicator = if self.can_go_to_parent() {
+            " (h: ���️ parent)"
+        } else {
+            ""
+        };
         let title = format!(
             " File Explorer - {}{} ({} items) ",
             self.current_dir.display(),
@@ -340,13 +360,13 @@ impl FileExplorer {
                 Block::default()
                     .borders(Borders::ALL)
                     .title(title)
-                    .style(Style::default().bg(theme.background))
+                    .style(Style::default().bg(theme.background)),
             )
             .highlight_style(
                 Style::default()
                     .bg(theme.selection)
                     .fg(Color::White)
-                    .add_modifier(Modifier::BOLD)
+                    .add_modifier(Modifier::BOLD),
             )
             .highlight_symbol("▶ ");
 
@@ -358,14 +378,12 @@ impl Default for FileExplorer {
     fn default() -> Self {
         Self::new(".").unwrap_or_else(|_| {
             if let Some(home_dir) = dirs::home_dir() {
-                Self::new(home_dir).unwrap_or_else(|_| {
-                    Self {
-                        current_dir: PathBuf::from("/"),
-                        entries: Vec::new(),
-                        selected_index: 0,
-                        list_state: ListState::default(),
-                        visible: false,
-                    }
+                Self::new(home_dir).unwrap_or_else(|_| Self {
+                    current_dir: PathBuf::from("/"),
+                    entries: Vec::new(),
+                    selected_index: 0,
+                    list_state: ListState::default(),
+                    visible: false,
                 })
             } else {
                 Self {
