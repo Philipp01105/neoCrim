@@ -40,7 +40,7 @@
 
 ### From Source
 ```bash
-git clone https://github.com/yourusername/neocrim.git
+git clone https://github.com/Philipp01105/neocrim.git
 cd neocrim
 cargo build --release
 cargo install --path .
