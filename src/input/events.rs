@@ -1278,9 +1278,7 @@ impl EventHandler {
                                         ));
                                     }
                                     Err(e) => {
-                                        app.set_error_message(format!(
-                                            "Error loading theme: {e}"
-                                        ));
+                                        app.set_error_message(format!("Error loading theme: {e}"));
                                     }
                                 }
                             }
@@ -1384,7 +1382,6 @@ impl EventHandler {
                     app.set_status_message(settings.join("\n"));
                 } else {
                     for setting in parts.iter().skip(1) {
-
                         if let Some(setting_name) = setting.strip_suffix('?') {
                             let display = app.config.get_setting_display(setting_name);
                             app.set_status_message(display);

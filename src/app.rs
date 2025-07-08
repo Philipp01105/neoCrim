@@ -405,7 +405,6 @@ impl App {
                     self.file_change_dialog.show(path);
                 }
             }
-
         }
     }
 

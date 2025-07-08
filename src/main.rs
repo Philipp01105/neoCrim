@@ -12,8 +12,8 @@ use std::path::PathBuf;
 fn main() -> Result<()> {
     let matches = Command::new("neocrim")
         .version("0.1.0")
-        .author("NeoCrim Team")
-        .about("A modern Neovim clone written in Rust")
+        .author("Philipp01105")
+        .about("A Neovim clone written in Rust")
         .arg(
             Arg::new("files")
                 .help("Files to open")
@@ -37,13 +37,15 @@ fn main() -> Result<()> {
 
     let config = Config::builder()
         .appender(Appender::builder().build("logfile", Box::new(logfile)))
-        .build(Root::builder()
-            .appender("logfile")
-            .build(if cfg!(debug_assertions){
-                LevelFilter::Debug
-            }else{
-                LevelFilter::Off
-            }))?;
+        .build(
+            Root::builder()
+                .appender("logfile")
+                .build(if cfg!(debug_assertions) {
+                    LevelFilter::Debug
+                } else {
+                    LevelFilter::Off
+                }),
+        )?;
 
     log4rs::init_config(config).expect("TODO: panic message");
 

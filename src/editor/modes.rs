@@ -1,5 +1,4 @@
-#[derive(Debug, Clone, Copy, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum Mode {
     #[default]
     Normal,
@@ -34,4 +33,3 @@ impl Mode {
         matches!(self, Mode::Command)
     }
 }
-

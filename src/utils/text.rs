@@ -119,7 +119,7 @@ impl TextUtils {
         }
     }
 
-    pub fn test(){
+    pub fn test() {
         let _text = "Hello, world!\nThis is a test.\n";
     }
 }

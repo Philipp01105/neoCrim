@@ -104,8 +104,7 @@ impl Cursor {
             let column_offset = self.col % viewport_width;
 
             if prev_line_len > viewport_width {
-                let prev_max_visual_lines =
-                    prev_line_len.div_ceil(viewport_width);
+                let prev_max_visual_lines = prev_line_len.div_ceil(viewport_width);
                 let target_line_start = (prev_max_visual_lines - 1) * viewport_width;
                 self.col = (target_line_start + column_offset).min(prev_line_len);
             } else {

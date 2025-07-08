@@ -184,9 +184,7 @@ impl Renderer {
                 current_visual_line += 1;
             } else {
                 let wrapped_lines = line_len.div_ceil(content_width);
-                log::info!(
-                    "  Line {line_idx} wrapping: {wrapped_lines} visual lines needed",
-                );
+                log::info!("  Line {line_idx} wrapping: {wrapped_lines} visual lines needed",);
 
                 for wrap_idx in 0..wrapped_lines {
                     let start = wrap_idx * content_width;
