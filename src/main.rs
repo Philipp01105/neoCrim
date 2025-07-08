@@ -63,6 +63,7 @@ fn main() -> Result<()> {
     }
 
     let mut terminal = setup_terminal()?;
+    log::debug!("Terminal setup complete, rawmode enabled = {}", crossterm::terminal::is_raw_mode_enabled()?.to_string());
     let mut renderer =
         Renderer::new_with_glass_effects(app.config.theme.clone(), &app.config.current_theme);
 

@@ -222,7 +222,7 @@ impl EventHandler {
                     }
                     return Ok(());
                 }
-                KeyCode::Char(c) if c as u8 == 22 => {
+                KeyCode::Char(c) if c as u8 == 22 || c as u8 == 3 => {
                     log::debug!("Ctrl+V (ASCII 22) pressed in normal mode");
                     let clipboard_text = crate::editor::Clipboard::get_text();
                     if !clipboard_text.is_empty() {

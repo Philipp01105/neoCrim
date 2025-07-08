@@ -10,7 +10,8 @@ use std::io::{self, Stdout, Write};
 pub type Terminal = RatatuiTerminal<CrosstermBackend<Stdout>>;
 
 pub fn setup_terminal() -> Result<Terminal> {
-    enable_raw_mode()?;
+    enable_raw_mode()
+        .map_err(|e| anyhow::anyhow!("Failed to enable raw mode: {}", e))?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
 
