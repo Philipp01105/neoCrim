@@ -24,7 +24,7 @@ impl Cursor {
             if line_width <= viewport_width {
                 (0, 1)
             } else {
-                let visual_lines = (line_width + viewport_width - 1) / viewport_width;
+                let visual_lines = line_width.div_ceil(viewport_width);
                 let current_visual_line = self.col / viewport_width;
                 (current_visual_line, visual_lines)
             }
@@ -55,19 +55,17 @@ impl Cursor {
         }
 
         let current_visual_line = self.col / viewport_width;
-        let max_visual_lines = (line_len + viewport_width - 1) / viewport_width;
+        let max_visual_lines = line_len.div_ceil(viewport_width);
 
         if current_visual_line + 1 < max_visual_lines {
             let next_line_start = (current_visual_line + 1) * viewport_width;
             let column_offset = self.col % viewport_width;
             self.col = (next_line_start + column_offset).min(line_len);
-        } else {
-            if self.line + 1 < buffer.line_count() {
-                self.line += 1;
-                let column_offset = self.col % viewport_width;
-                let new_line_len = buffer.line_len(self.line);
-                self.col = column_offset.min(new_line_len);
-            }
+        } else if self.line + 1 < buffer.line_count() {
+            self.line += 1;
+            let column_offset = self.col % viewport_width;
+            let new_line_len = buffer.line_len(self.line);
+            self.col = column_offset.min(new_line_len);
         }
 
         self.desired_col = self.col % viewport_width;
@@ -100,20 +98,18 @@ impl Cursor {
             let prev_line_start = (current_visual_line - 1) * viewport_width;
             let column_offset = self.col % viewport_width;
             self.col = prev_line_start + column_offset;
-        } else {
-            if self.line > 0 {
-                self.line -= 1;
-                let prev_line_len = buffer.line_len(self.line);
-                let column_offset = self.col % viewport_width;
+        } else if self.line > 0 {
+            self.line -= 1;
+            let prev_line_len = buffer.line_len(self.line);
+            let column_offset = self.col % viewport_width;
 
-                if prev_line_len > viewport_width {
-                    let prev_max_visual_lines =
-                        (prev_line_len + viewport_width - 1) / viewport_width;
-                    let target_line_start = (prev_max_visual_lines - 1) * viewport_width;
-                    self.col = (target_line_start + column_offset).min(prev_line_len);
-                } else {
-                    self.col = column_offset.min(prev_line_len);
-                }
+            if prev_line_len > viewport_width {
+                let prev_max_visual_lines =
+                    prev_line_len.div_ceil(viewport_width);
+                let target_line_start = (prev_max_visual_lines - 1) * viewport_width;
+                self.col = (target_line_start + column_offset).min(prev_line_len);
+            } else {
+                self.col = column_offset.min(prev_line_len);
             }
         }
 

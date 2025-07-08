@@ -75,7 +75,7 @@ impl FileWatcher {
                     }
                 }
                 Err(e) => {
-                    log::error!("File watcher error: {}", e);
+                    log::error!("File watcher error: {e}");
                 }
             }
         }

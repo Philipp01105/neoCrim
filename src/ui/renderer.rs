@@ -160,25 +160,17 @@ impl Renderer {
                         let end = (h_offset + content_width).min(line_len);
                         let result = line_content[h_offset..end].to_string();
                         log::debug!(
-                            "  Line {} no-wrap: h_offset={}, showing chars {}..{}, content=\"{}\"",
-                            line_idx,
-                            h_offset,
-                            h_offset,
-                            end,
-                            result
+                            "  Line {line_idx} no-wrap: h_offset={h_offset}, showing chars {h_offset}..{end}, content=\"{result}\""
                         );
                         result
                     } else {
                         log::info!(
-                            "  Line {} no-wrap: h_offset={} >= line_len={}, showing empty",
-                            line_idx,
-                            h_offset,
-                            line_len
+                            "  Line {line_idx} no-wrap: h_offset={h_offset} >= line_len={line_len}, showing empty"
                         );
                         String::new()
                     }
                 } else {
-                    log::info!("  Line {} fits in viewport: showing full content", line_idx);
+                    log::info!("  Line {line_idx} fits in viewport: showing full content");
                     line_content.clone()
                 };
 

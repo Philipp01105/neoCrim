@@ -139,20 +139,18 @@ impl FileExplorer {
 
         let mut file_entries: Vec<FileEntry> = Vec::new();
 
-        for entry in entries {
-            if let Ok(entry) = entry {
-                let path = entry.path();
-                let name = entry.file_name().to_string_lossy().to_string();
-                let is_directory = path.is_dir();
-                let is_hidden = name.starts_with('.');
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let name = entry.file_name().to_string_lossy().to_string();
+            let is_directory = path.is_dir();
+            let is_hidden = name.starts_with('.');
 
-                file_entries.push(FileEntry {
-                    name,
-                    path,
-                    is_directory,
-                    is_hidden,
-                });
-            }
+            file_entries.push(FileEntry {
+                name,
+                path,
+                is_directory,
+                is_hidden,
+            });
         }
 
         file_entries.sort_by(|a, b| match (a.is_directory, b.is_directory) {
@@ -312,7 +310,7 @@ impl FileExplorer {
                 let icon = if entry.is_directory {
                     "📁 "
                 } else {
-                    match entry.name.split('.').last().unwrap_or("") {
+                    match entry.name.split('.').next_back().unwrap_or("") {
                         "rs" => "🦀 ",
                         "md" => "📝 ",
                         "txt" => "📄 ",

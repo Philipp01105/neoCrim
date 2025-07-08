@@ -442,6 +442,12 @@ impl App {
     }
 }
 
+impl Default for SearchState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SearchState {
     pub fn new() -> Self {
         Self {
@@ -513,6 +519,12 @@ impl SearchState {
         self.is_active = false;
     }
 
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Default for HelpWindow {
     fn default() -> Self {
         Self::new()
     }
@@ -659,6 +671,12 @@ impl HelpWindow {
         }
     }
 
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Default for FileChangeDialog {
     fn default() -> Self {
         Self::new()
     }

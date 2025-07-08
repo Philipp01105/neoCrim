@@ -150,7 +150,7 @@ impl EventHandler {
                 }
                 KeyCode::Enter => {
                     if let Err(e) = app.current_buffer_mut().handle_terminal_enter() {
-                        app.set_error_message(format!("Terminal error: {}", e));
+                        app.set_error_message(format!("Terminal error: {e}"));
                     }
                     return Ok(());
                 }
@@ -214,9 +214,7 @@ impl EventHandler {
                         let char_count = clipboard_text.chars().count();
                         self.paste_mode_remaining = char_count;
                         log::debug!(
-                            "Setting paste mode for {} characters: '{}'",
-                            char_count,
-                            clipboard_text
+                            "Setting paste mode for {char_count} characters: '{clipboard_text}'"
                         );
 
                         app.paste();
@@ -231,9 +229,7 @@ impl EventHandler {
                         let char_count = clipboard_text.chars().count();
                         self.paste_mode_remaining = char_count;
                         log::debug!(
-                            "Setting paste mode for {} characters: '{}'",
-                            char_count,
-                            clipboard_text
+                            "Setting paste mode for {char_count} characters: '{clipboard_text}'"
                         );
 
                         app.paste();
@@ -336,21 +332,19 @@ impl EventHandler {
                 }
                 _ => {}
             }
-        } else {
-            if app.selection.active {
-                match key_event.code {
-                    KeyCode::Left
-                    | KeyCode::Right
-                    | KeyCode::Up
-                    | KeyCode::Down
-                    | KeyCode::Char('h')
-                    | KeyCode::Char('j')
-                    | KeyCode::Char('k')
-                    | KeyCode::Char('l') => {
-                        app.clear_selection();
-                    }
-                    _ => {}
+        } else if app.selection.active {
+            match key_event.code {
+                KeyCode::Left
+                | KeyCode::Right
+                | KeyCode::Up
+                | KeyCode::Down
+                | KeyCode::Char('h')
+                | KeyCode::Char('j')
+                | KeyCode::Char('k')
+                | KeyCode::Char('l') => {
+                    app.clear_selection();
                 }
+                _ => {}
             }
         }
 
@@ -502,7 +496,7 @@ impl EventHandler {
             KeyCode::Enter | KeyCode::Char('l') | KeyCode::Right => {
                 if let Some(file_path) = app.file_explorer.select_current()? {
                     if let Err(e) = app.open_file(file_path.clone()) {
-                        app.set_status_message(format!("Error opening file: {}", e));
+                        app.set_status_message(format!("Error opening file: {e}"));
                     } else {
                         app.set_status_message(format!("Opened: {}", file_path.display()));
                         app.file_explorer.toggle_visibility();
@@ -513,7 +507,7 @@ impl EventHandler {
             KeyCode::Char('h') | KeyCode::Left => match app.file_explorer.go_to_parent() {
                 Ok(()) => {}
                 Err(e) => {
-                    app.set_status_message(format!("{}", e));
+                    app.set_status_message(format!("{e}"));
                 }
             },
             KeyCode::F(2) | KeyCode::Esc => {
@@ -524,7 +518,7 @@ impl EventHandler {
                     app.set_status_message("Directory refreshed".to_string());
                 }
                 Err(e) => {
-                    app.set_status_message(format!("Error refreshing: {}", e));
+                    app.set_status_message(format!("Error refreshing: {e}"));
                 }
             },
             KeyCode::Char('p') => {
@@ -606,11 +600,11 @@ impl EventHandler {
                 KeyCode::Char('v') => {
                     log::debug!("*** Ctrl+V HANDLER TRIGGERED in insert mode ***");
                     let clipboard_text = crate::editor::Clipboard::get_text();
-                    log::debug!("Clipboard content: '{}'", clipboard_text);
+                    log::debug!("Clipboard content: '{clipboard_text}'");
                     if !clipboard_text.is_empty() {
                         let char_count = clipboard_text.chars().count() + 5;
                         self.paste_mode_remaining = char_count;
-                        log::debug!("*** SETTING PASTE MODE for {} characters (with safety buffer): '{}' ***", char_count, clipboard_text);
+                        log::debug!("*** SETTING PASTE MODE for {char_count} characters (with safety buffer): '{clipboard_text}' ***");
 
                         app.paste();
                         app.set_status_message("Pasted from clipboard".to_string());
@@ -626,9 +620,7 @@ impl EventHandler {
                         let char_count = clipboard_text.chars().count();
                         self.paste_mode_remaining = char_count;
                         log::debug!(
-                            "Setting paste mode for {} characters: '{}'",
-                            char_count,
-                            clipboard_text
+                            "Setting paste mode for {char_count} characters: '{clipboard_text}'"
                         );
 
                         app.paste();
@@ -731,14 +723,12 @@ impl EventHandler {
                 }
                 _ => {}
             }
-        } else {
-            if app.selection.active {
-                match key_event.code {
-                    KeyCode::Left | KeyCode::Right | KeyCode::Up | KeyCode::Down => {
-                        app.clear_selection();
-                    }
-                    _ => {}
+        } else if app.selection.active {
+            match key_event.code {
+                KeyCode::Left | KeyCode::Right | KeyCode::Up | KeyCode::Down => {
+                    app.clear_selection();
                 }
+                _ => {}
             }
         }
 
@@ -812,25 +802,20 @@ impl EventHandler {
                     return Ok(());
                 }
 
-                match c as u8 {
-                    22 => {
-                        log::debug!("Ctrl+V (ASCII 22) detected as char in insert mode");
-                        let clipboard_text = crate::editor::Clipboard::get_text();
-                        if !clipboard_text.is_empty() {
-                            let char_count = clipboard_text.chars().count();
-                            self.paste_mode_remaining = char_count;
-                            log::debug!(
-                                "Setting paste mode for {} characters: '{}'",
-                                char_count,
-                                clipboard_text
-                            );
+                if c as u8 == 22 {
+                    log::debug!("Ctrl+V (ASCII 22) detected as char in insert mode");
+                    let clipboard_text = crate::editor::Clipboard::get_text();
+                    if !clipboard_text.is_empty() {
+                        let char_count = clipboard_text.chars().count();
+                        self.paste_mode_remaining = char_count;
+                        log::debug!(
+                            "Setting paste mode for {char_count} characters: '{clipboard_text}'"
+                        );
 
-                            app.paste();
-                            app.set_status_message("Pasted from clipboard".to_string());
-                        }
-                        return Ok(());
+                        app.paste();
+                        app.set_status_message("Pasted from clipboard".to_string());
                     }
-                    _ => {}
+                    return Ok(());
                 }
 
                 match c {
@@ -1124,7 +1109,7 @@ impl EventHandler {
     }
 
     fn execute_command(&mut self, app: &mut App, command: &str) -> Result<()> {
-        let parts: Vec<&str> = command.trim().split_whitespace().collect();
+        let parts: Vec<&str> = command.split_whitespace().collect();
         if parts.is_empty() {
             return Ok(());
         }
@@ -1137,14 +1122,14 @@ impl EventHandler {
             }
             "w" | "write" => {
                 if let Err(e) = app.current_buffer_mut().save() {
-                    app.set_error_message(format!("Error saving: {}", e));
+                    app.set_error_message(format!("Error saving: {e}"));
                 } else {
                     app.set_status_message("File saved".to_string());
                 }
             }
             "wq" => {
                 if let Err(e) = app.current_buffer_mut().save() {
-                    app.set_error_message(format!("Error saving: {}", e));
+                    app.set_error_message(format!("Error saving: {e}"));
                 } else {
                     app.quit();
                 }
@@ -1156,13 +1141,13 @@ impl EventHandler {
                         Ok(()) => {
                             let current_buffer = app.current_buffer();
                             if current_buffer.is_modified {
-                                app.set_status_message(format!("Created new file: {}", filename));
+                                app.set_status_message(format!("Created new file: {filename}"));
                             } else {
-                                app.set_status_message(format!("Opened: {}", filename));
+                                app.set_status_message(format!("Opened: {filename}"));
                             }
                         }
                         Err(e) => {
-                            app.set_error_message(format!("Error opening/creating file: {}", e));
+                            app.set_error_message(format!("Error opening/creating file: {e}"));
                         }
                     }
                 } else {
@@ -1184,7 +1169,7 @@ impl EventHandler {
                             ));
                         }
                         Err(e) => {
-                            app.set_error_message(format!("Error changing directory: {}", e));
+                            app.set_error_message(format!("Error changing directory: {e}"));
                         }
                     }
                 } else {
@@ -1198,14 +1183,14 @@ impl EventHandler {
                 } else {
                     "hidden"
                 };
-                app.set_status_message(format!("File explorer {}", status));
+                app.set_status_message(format!("File explorer {status}"));
             }
             "refresh" => match app.file_explorer.refresh() {
                 Ok(()) => {
                     app.set_status_message("File explorer refreshed".to_string());
                 }
                 Err(e) => {
-                    app.set_error_message(format!("Error refreshing explorer: {}", e));
+                    app.set_error_message(format!("Error refreshing explorer: {e}"));
                 }
             },
             "theme" => {
@@ -1219,7 +1204,7 @@ impl EventHandler {
                                 ));
                             }
                             Err(e) => {
-                                app.set_error_message(format!("Error setting theme: {}", e));
+                                app.set_error_message(format!("Error setting theme: {e}"));
                             }
                         }
                     } else if parts[1] == "list" {
@@ -1227,8 +1212,7 @@ impl EventHandler {
                         let mut message = "Available themes:\n".to_string();
                         for (index, name, author, description) in themes {
                             message.push_str(&format!(
-                                "  {}: {} by {} - {}\n",
-                                index, name, author, description
+                                "  {index}: {name} by {author} - {description}\n"
                             ));
                         }
                         app.set_status_message(message);
@@ -1244,8 +1228,7 @@ impl EventHandler {
                                     }
                                     Err(e) => {
                                         app.set_error_message(format!(
-                                            "Error setting default theme: {}",
-                                            e
+                                            "Error setting default theme: {e}"
                                         ));
                                     }
                                 }
@@ -1257,7 +1240,7 @@ impl EventHandler {
                             let mut message =
                                 "Default themes (from /themes directory):\n".to_string();
                             for (index, theme_name) in default_themes.iter().enumerate() {
-                                message.push_str(&format!("  {}: {}\n", index, theme_name));
+                                message.push_str(&format!("  {index}: {theme_name}\n"));
                             }
                             message.push_str("Usage: :theme default <index>");
                             app.set_status_message(message);
@@ -1296,8 +1279,7 @@ impl EventHandler {
                                     }
                                     Err(e) => {
                                         app.set_error_message(format!(
-                                            "Error loading theme: {}",
-                                            e
+                                            "Error loading theme: {e}"
                                         ));
                                     }
                                 }
@@ -1308,8 +1290,7 @@ impl EventHandler {
                     let current_theme = &app.config.current_theme.name;
                     let themes_count = app.config.theme_manager.theme_count();
                     app.set_status_message(format!(
-                        "Current theme: {}\nUsage: :theme <name|index|list> or :theme default [index] or :theme <path.nctheme>\nAvailable themes: {} (use ':theme list' to see all)",
-                        current_theme, themes_count
+                        "Current theme: {current_theme}\nUsage: :theme <name|index|list> or :theme default [index] or :theme <path.nctheme>\nAvailable themes: {themes_count} (use ':theme list' to see all)"
                     ));
                 }
             }
@@ -1358,7 +1339,7 @@ impl EventHandler {
                             }
                             app.cursor.col = 0;
                             app.cursor.desired_col = 0;
-                            app.set_status_message(format!("Jumped to line {}", line_num));
+                            app.set_status_message(format!("Jumped to line {line_num}"));
                         } else {
                             app.set_error_message(format!(
                                 "Line {} out of range (1-{})",
@@ -1402,11 +1383,9 @@ impl EventHandler {
                     settings.push("  so/scrolloffset    - Scroll offset".to_string());
                     app.set_status_message(settings.join("\n"));
                 } else {
-                    for i in 1..parts.len() {
-                        let setting = parts[i];
+                    for setting in parts.iter().skip(1) {
 
-                        if setting.ends_with('?') {
-                            let setting_name = &setting[..setting.len() - 1];
+                        if let Some(setting_name) = setting.strip_suffix('?') {
                             let display = app.config.get_setting_display(setting_name);
                             app.set_status_message(display);
                             continue;
@@ -1438,7 +1417,7 @@ impl EventHandler {
                 if parts.len() > 1 {
                     let command = parts[1..].join(" ");
                     if let Err(e) = app.current_buffer_mut().execute_terminal_command(&command) {
-                        app.set_error_message(format!("Command error: {}", e));
+                        app.set_error_message(format!("Command error: {e}"));
                     }
                 } else {
                     app.set_status_message("Terminal opened".to_string());
@@ -1463,7 +1442,7 @@ impl EventHandler {
             "ts" | "tabsize" | "tab_size" => {
                 if let Ok(size) = value.parse::<usize>() {
                     app.config.set_tab_size(size)?;
-                    app.set_status_message(format!("Tab size set to {}", size));
+                    app.set_status_message(format!("Tab size set to {size}"));
                 } else {
                     return Err(anyhow::anyhow!("Invalid tab size: {}", value));
                 }
@@ -1471,7 +1450,7 @@ impl EventHandler {
             "so" | "scrolloffset" | "scroll_offset" => {
                 if let Ok(offset) = value.parse::<usize>() {
                     app.config.set_scroll_offset(offset)?;
-                    app.set_status_message(format!("Scroll offset set to {}", offset));
+                    app.set_status_message(format!("Scroll offset set to {offset}"));
                 } else {
                     return Err(anyhow::anyhow!("Invalid scroll offset: {}", value));
                 }

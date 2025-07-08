@@ -11,6 +11,12 @@ pub struct TerminalOutput {
     pub history_index: Option<usize>,
 }
 
+impl Default for TerminalOutput {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TerminalOutput {
     pub fn new() -> Self {
         Self {
@@ -56,7 +62,7 @@ impl TerminalOutput {
             return Ok(());
         }
 
-        self.add_line(format!("$ {}", command));
+        self.add_line(format!("$ {command}"));
         self.is_running = true;
 
         let parts: Vec<&str> = command.split_whitespace().collect();
@@ -85,7 +91,7 @@ impl TerminalOutput {
                     let reader = BufReader::new(stderr);
                     for line in reader.lines() {
                         match line {
-                            Ok(line) => self.add_line(format!("ERROR: {}", line)),
+                            Ok(line) => self.add_line(format!("ERROR: {line}")),
                             Err(_) => break,
                         }
                     }
@@ -101,12 +107,12 @@ impl TerminalOutput {
                         }
                     }
                     Err(e) => {
-                        self.add_line(format!("Failed to wait for command: {}", e));
+                        self.add_line(format!("Failed to wait for command: {e}"));
                     }
                 }
             }
             Err(e) => {
-                self.add_line(format!("Failed to execute command '{}': {}", command, e));
+                self.add_line(format!("Failed to execute command '{command}': {e}"));
             }
         }
 
