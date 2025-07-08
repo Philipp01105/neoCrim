@@ -10,7 +10,7 @@ pub struct Clipboard;
 impl Clipboard {
     pub fn set_text(text: String) {
         if let Ok(mut clipboard) = SystemClipboard::new() {
-            if let Err(_) = clipboard.set_text(&text) {
+            if clipboard.set_text(&text).is_err() {
                 log::warn!("Failed to set system clipboard, using internal clipboard");
                 Self::set_internal_text(text);
             }

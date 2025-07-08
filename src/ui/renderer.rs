@@ -186,18 +186,14 @@ impl Renderer {
                 if line_idx == cursor.line {
                     cursor_visual_line = current_visual_line;
                     log::info!(
-                        "  Line {} is cursor line, cursor_visual_line={}",
-                        line_idx,
-                        cursor_visual_line
+                        "  Line {line_idx} is cursor line, cursor_visual_line={cursor_visual_line}",
                     );
                 }
                 current_visual_line += 1;
             } else {
-                let wrapped_lines = (line_len + content_width - 1) / content_width;
+                let wrapped_lines = line_len.div_ceil(content_width);
                 log::info!(
-                    "  Line {} wrapping: {} visual lines needed",
-                    line_idx,
-                    wrapped_lines
+                    "  Line {line_idx} wrapping: {wrapped_lines} visual lines needed",
                 );
 
                 for wrap_idx in 0..wrapped_lines {
@@ -206,12 +202,7 @@ impl Renderer {
                     let segment = line_content[start..end].to_string();
 
                     log::info!(
-                        "    Wrap {} of line {}: chars {}..{}, content=\"{}\"",
-                        wrap_idx,
-                        line_idx,
-                        start,
-                        end,
-                        segment
+                        "    Wrap {wrap_idx} of line {line_idx}: chars {start}..{end}, content=\"{segment}\"",
                     );
 
                     visual_lines.push((line_idx, wrap_idx, segment));
@@ -219,10 +210,7 @@ impl Renderer {
                     if line_idx == cursor.line && cursor.col >= start && cursor.col < end {
                         cursor_visual_line = current_visual_line;
                         log::info!(
-                            "    Cursor found in wrap {} of line {}, cursor_visual_line={}",
-                            wrap_idx,
-                            line_idx,
-                            cursor_visual_line
+                            "    Cursor found in wrap {wrap_idx} of line {line_idx}, cursor_visual_line={cursor_visual_line}",
                         );
                     }
                     current_visual_line += 1;
@@ -246,10 +234,7 @@ impl Renderer {
         let end_visual_line = (start_visual_line + viewport_height).min(visual_lines.len());
 
         log::info!(
-            "Viewport: showing visual lines {} to {} (total viewport_height={})",
-            start_visual_line,
-            end_visual_line,
-            viewport_height
+            "Viewport: showing visual lines {start_visual_line} to {end_visual_line} (total viewport_height={viewport_height})",
         );
 
         let mut lines = Vec::new();
@@ -266,12 +251,8 @@ impl Renderer {
                             log::info!("  Line number (cursor line): \"{}\"", line_num.trim());
                             line_num
                         } else {
-                            let relative_distance = if *line_idx > cursor.line {
-                                *line_idx - cursor.line
-                            } else {
-                                cursor.line - *line_idx
-                            };
-                            let line_num = format!("{:4} ", relative_distance);
+                            let relative_distance = (*line_idx).abs_diff(cursor.line);
+                            let line_num = format!("{relative_distance:4} ");
                             log::info!(
                                 "  Line number (relative): distance={}, display=\"{}\"",
                                 relative_distance,
@@ -677,7 +658,7 @@ impl Renderer {
     }
 
     fn render_help_window(&self, frame: &mut Frame, app: &App, area: Rect) {
-        let window_width = (area.width * 4 / 5).max(60).min(80);
+        let window_width = (area.width * 4 / 5).clamp(60, 80);
         let window_height = (area.height * 4 / 5).max(20);
 
         let x = (area.width.saturating_sub(window_width)) / 2;
@@ -785,7 +766,7 @@ impl Renderer {
 
         let content = vec![
             Line::from(""),
-            Line::from(format!(" File has been modified: {}", file_name)),
+            Line::from(format!(" File has been modified: {file_name}")),
             Line::from(""),
             Line::from(" Choose action:"),
             Line::from(""),
@@ -888,11 +869,7 @@ impl Renderer {
 
             let viewport_height = inner_area.height as usize;
             let total_lines = terminal_output.lines.len();
-            let _start_line = if total_lines <= viewport_height {
-                0
-            } else {
-                total_lines - viewport_height
-            };
+            let _start_line = total_lines.saturating_sub(viewport_height);
 
             let content_height = viewport_height.saturating_sub(1);
             let display_lines = if terminal_output.lines.len() > content_height {

@@ -96,7 +96,7 @@ impl Config {
         let new_theme = self
             .theme_manager
             .get_theme_by_name(theme_name)
-            .with_context(|| format!("Failed to load theme: {}", theme_name))?;
+            .with_context(|| format!("Failed to load theme: {theme_name}"))?;
 
         self.current_theme = new_theme;
         self.theme = self.current_theme.to_legacy_theme();
@@ -296,7 +296,7 @@ impl Config {
             "fastcommandline" | "fast_command_line" | "fastcl" => {
                 format!("fast_command_line = {}", self.editor.fast_command_line)
             }
-            _ => format!("Unknown setting: {}", setting),
+            _ => format!("Unknown setting: {setting}"),
         }
     }
 

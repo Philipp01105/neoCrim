@@ -63,7 +63,7 @@ impl ThemeManager {
             .ok_or_else(|| anyhow::anyhow!("Theme '{}' not found", name))?;
 
         let theme: NeoTheme = toml::from_str(theme_content)
-            .with_context(|| format!("Failed to parse embedded theme: {}", name))?;
+            .with_context(|| format!("Failed to parse embedded theme: {name}"))?;
 
         Ok(theme)
     }

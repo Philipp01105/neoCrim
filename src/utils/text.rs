@@ -118,4 +118,8 @@ impl TextUtils {
             " ".repeat(level * tab_size)
         }
     }
+
+    pub fn test(){
+        let _text = "Hello, world!\nThis is a test.\n";
+    }
 }

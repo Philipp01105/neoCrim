@@ -91,7 +91,7 @@ impl App {
         let buffer = Buffer::from_file(&path)?;
         if path.exists() {
             if let Err(e) = self.file_watcher.watch(&path) {
-                log::warn!("Failed to watch file {:?}: {}", path, e);
+                log::warn!("Failed to watch file {path:?}: {e}");
             }
         }
         self.cursor.col = 0;
@@ -111,7 +111,7 @@ impl App {
         if path.exists() {
             let buffer = Buffer::from_file(&path)?;
             if let Err(e) = self.file_watcher.watch(&path) {
-                log::warn!("Failed to watch file {:?}: {}", path, e);
+                log::warn!("Failed to watch file {path:?}: {e}");
             }
             self.buffers.push(buffer);
             self.current_buffer = self.buffers.len() - 1;
@@ -289,7 +289,7 @@ impl App {
     }
 
     pub fn save_undo_state(&mut self) {
-        let cursor = self.cursor.clone();
+        let cursor = self.cursor;
         self.current_buffer_mut().save_state(&cursor);
     }
 
@@ -322,7 +322,7 @@ impl App {
             self.search_state.goto_current_result(&mut self.cursor);
             self.set_status_message(format!("Found {} matches", self.search_state.results.len()));
         } else {
-            self.set_error_message(format!("Pattern not found: {}", query));
+            self.set_error_message(format!("Pattern not found: {query}"));
         }
     }
 
@@ -400,14 +400,12 @@ impl App {
     pub fn check_file_changes(&mut self) {
         let events = self.file_watcher.poll_events();
         for event in events {
-            match event {
-                FileEvent::Modified(path) => {
-                    if self.has_buffer_for_file(&path) && !self.file_change_dialog.visible {
-                        self.file_change_dialog.show(path);
-                    }
+            if let FileEvent::Modified(path) = event {
+                if self.has_buffer_for_file(&path) && !self.file_change_dialog.visible {
+                    self.file_change_dialog.show(path);
                 }
-                _ => {}
             }
+
         }
     }
 
@@ -513,6 +511,10 @@ impl SearchState {
         self.results.clear();
         self.current_result = 0;
         self.is_active = false;
+    }
+
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -656,6 +658,10 @@ impl HelpWindow {
             self.scroll_offset += 1;
         }
     }
+
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl FileChangeDialog {
@@ -687,6 +693,10 @@ impl FileChangeDialog {
 
     pub fn get_selected_option(&self) -> usize {
         self.selected_option
+    }
+
+    fn default() -> Self {
+        Self::new()
     }
 }
 

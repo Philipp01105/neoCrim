@@ -252,7 +252,7 @@ impl Buffer {
             log::debug!(
                 "line({}): raw='{}', trimmed='{}', is_last_line={}",
                 line_idx,
-                line_content[..50].escape_debug(),
+                line_content.escape_debug(),
                 trimmed.escape_debug(),
                 is_last_line
             );
@@ -278,12 +278,7 @@ impl Buffer {
             };
 
             log::debug!(
-                "line_len({}): raw_len={}, has_newline={}, calculated_len={}, is_last_line={}",
-                line_idx,
-                raw_len,
-                has_newline,
-                calculated_len,
-                is_last_line
+                "line_len({line_idx}): raw_len={raw_len}, has_newline={has_newline}, calculated_len={calculated_len}, is_last_line={is_last_line}"
             );
 
             calculated_len
@@ -387,20 +382,15 @@ impl Buffer {
         let is_last_line = line == self.content.len_lines() - 1;
 
         log::debug!(
-            "line_col_to_char_idx: line={}, col={}, line_start={}, line_len={}, is_last_line={}",
-            line,
-            col,
-            line_start,
-            line_len,
-            is_last_line
+            "line_col_to_char_idx: line={line}, col={col}, line_start={line_start}, line_len={line_len}, is_last_line={is_last_line}",
         );
 
         if col <= line_len {
             let result = line_start + col;
-            log::debug!("  -> char_idx={}", result);
+            log::debug!("  -> char_idx={result}");
             Some(result)
         } else {
-            log::debug!("  -> None (col {} > line_len {})", col, line_len);
+            log::debug!("  -> None (col {col} > line_len {line_len})");
             None
         }
     }
@@ -410,7 +400,7 @@ impl Buffer {
 
         let undo_state = UndoState {
             content: self.content.clone(),
-            cursor: cursor.clone(),
+            cursor: *cursor,
         };
 
         self.undo_stack.push_back(undo_state);
@@ -426,7 +416,7 @@ impl Buffer {
         if let Some(undo_state) = self.undo_stack.pop_back() {
             let current_state = UndoState {
                 content: self.content.clone(),
-                cursor: undo_state.cursor.clone(),
+                cursor: undo_state.cursor,
             };
             self.redo_stack.push_back(current_state);
 
@@ -443,7 +433,7 @@ impl Buffer {
         if let Some(redo_state) = self.redo_stack.pop_back() {
             let current_state = UndoState {
                 content: self.content.clone(),
-                cursor: redo_state.cursor.clone(),
+                cursor: redo_state.cursor,
             };
             self.undo_stack.push_back(current_state);
 
