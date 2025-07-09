@@ -10,8 +10,7 @@
 
 ### Core Editing
 - **Modal Editing** - Vim-inspired keybindings with Normal, Insert, Visual, and Command modes
-- **Smart Cursor Movement** - Accurate visual positioning with soft-wrap support
-- **Multi-Buffer Support** - Work with multiple files simultaneously
+- **Soft-Wrap Support** - Automatically wrap long lines for better readability
 - **Syntax Highlighting** - Built-in support for 20+ programming languages
 - **File Explorer** - Integrated file browser with directory navigation
 
@@ -28,8 +27,7 @@
 - **Extensible Config** - JSON-based configuration system
 
 ### User Experience
-- **Interactive Help** - Comprehensive help window with scrolling support
-- **Error Handling** - Clear error messages and status feedback
+- **Help** - Comprehensive help window `:help`
 - **Keyboard Shortcuts** - Efficient navigation and file management
 - **Responsive UI** - Smooth terminal interface built with Ratatui
 
@@ -40,10 +38,13 @@
 
 ### From Source
 ```bash
-git clone https://github.com/Philipp01105/neocrim.git
+cargo install --git https://github.com/Philipp01105/neocrim.git --release
+```
+OR
+```bash
+git clone https//github.com/Philipp01105/neocrim.git
 cd neocrim
 cargo build --release
-cargo install --path .
 ```
 
 ### Quick Start
@@ -52,7 +53,7 @@ cargo install --path .
 neocrim
 
 # Open a specific file
-neocrim myfile.txt
+neocrim myfile.txt (cant be new files as of yet)
 
 # Open with file explorer
 neocrim --explorer
@@ -137,8 +138,13 @@ cursor = { r = 248, g = 248, b = 242 }
 ```
 
 ### Built-in Themes
-- Light Theme (`themes/light.nctheme`)
-- Dark Theme (`themes/dark.nctheme`)
+- `themes/dark.nctheme` - Dark theme with high contrast
+- `themes/light.nctheme` - Light theme with soft colors
+- `themes/solarized.nctheme` - Solarized theme for readability
+- `themes/nord.nctheme` - Nord theme with icy colors
+- `themes/monokai.nctheme` - Monokai theme for vibrant colors
+- `themes/dracula.nctheme` - Dracula theme with dark background
+- `themes/cyberpunk.nctheme` - Cyberpunk theme with neon colors
 
 ## 🛠️ Supported Languages
 
